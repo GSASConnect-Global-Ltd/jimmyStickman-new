@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
-import { Swiper, SwiperSlide } from "swiper/react";
-import "swiper/css";
-import ProductCard from "@/components/ui/ProductCard";
 import { IProduct } from "@/app/types/Product";
+import ProductCard from "@/components/ui/ProductCard";
+import Link from "next/link";
 
 const Products = () => {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
@@ -16,16 +15,12 @@ const Products = () => {
     setIsClient(true);
   }, []);
 
-  const openModal = (filter: string) => {
-    setSelectedFilter(filter);
-  };
+  const openModal = (filter: string) => setSelectedFilter(filter);
+  const closeModal = () => setSelectedFilter(null);
 
-  const closeModal = () => {
-    setSelectedFilter(null);
-  };
-
-  const products: IProduct[] = [
+  const products: (IProduct & { id: string })[] = [
     {
+      id: "1",
       name: "Stylish Sneakers",
       price: "$120.00",
       offer: "Limited Time Offer",
@@ -41,6 +36,7 @@ const Products = () => {
       ],
     },
     {
+      id: "2",
       name: "Casual Wear",
       price: "$95.00",
       offer: "New Arrival",
@@ -60,7 +56,7 @@ const Products = () => {
   return (
     <div className="p-4 md:p-8 bg-gray-100 min-h-screen relative">
       <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">All Products</h2>
-      
+
       <div className="flex space-x-4 md:space-x-8 text-gray-700 font-medium border-b pb-3 uppercase overflow-x-auto">
         {["Shop All", "Men", "Women", "Kids"].map((category) => (
           <p key={category} className="cursor-pointer hover:text-black transition whitespace-nowrap">
@@ -68,7 +64,7 @@ const Products = () => {
           </p>
         ))}
       </div>
-      
+
       <div className="flex justify-between items-center mt-6 flex-wrap gap-2">
         <div className="flex space-x-3 md:space-x-6 overflow-x-auto">
           {["Gender", "Category", "Size", "Color", "Price", "All Filters"].map((filter) => (
@@ -82,13 +78,15 @@ const Products = () => {
           ))}
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mt-6">
-        {products.map((product, index) => (
-          <ProductCard key={index} product={product} />
+        {products.map((product) => (
+          <Link key={product.id} href={`/product/${product.id}`} className="block">
+            <ProductCard product={product} />
+          </Link>
         ))}
       </div>
-      
+
       {isClient && selectedFilter &&
         ReactDOM.createPortal(
           <div className="fixed top-0 right-0 w-full md:w-1/4 h-full bg-white shadow-lg p-6 z-50 overflow-y-auto transition-transform transform translate-x-0 rounded-l-lg"

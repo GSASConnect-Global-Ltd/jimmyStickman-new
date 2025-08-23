@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import ProductDetails from "./ProductDetails";
 import { IProduct } from "@/app/types/Product";
 import ProductCard from "@/components/ui/ProductCard";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
+import Link from "next/link";
 
 const SingleProduct = () => {
-  const product: IProduct = {
+  const product: IProduct & { id: string } = {
+    id: "1",
     name: "Elegant Dress",
     price: "$49.99",
     offer: "20% Off - Limited Time",
@@ -25,8 +27,9 @@ const SingleProduct = () => {
     sizes: ["XS", "S", "M", "L", "XL", "XXL", "XXXL"],
   };
 
-  const recommendedProducts: IProduct[] = [
+  const recommendedProducts: (IProduct & { id: string })[] = [
     {
+      id: "2",
       name: "Luxury Wrist Watch",
       price: "$199.99",
       offer: "10% Off - Limited Stock",
@@ -40,6 +43,7 @@ const SingleProduct = () => {
       sizes: [],
     },
     {
+      id: "3",
       name: "Classic Leather Bag",
       price: "$89.99",
       offer: "15% Off - Exclusive Deal",
@@ -81,9 +85,11 @@ const SingleProduct = () => {
 
       {/* Recommended Products */}
       <h2 className="mt-10 text-2xl font-semibold">You May Also Like</h2>
-      <div className="grid md:grid-cols-4 grid-cols-2 mt-6">
-        {recommendedProducts.map((item, index) => (
-          <ProductCard key={index} product={item} hideColors={true} />
+      <div className="grid md:grid-cols-4 grid-cols-2 mt-6 gap-4">
+        {recommendedProducts.map((item) => (
+          <Link key={item.id} href={`/product/${item.id}`} className="block">
+            <ProductCard product={item} hideColors={true} />
+          </Link>
         ))}
       </div>
     </div>
