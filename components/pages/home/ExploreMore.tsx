@@ -31,7 +31,7 @@ const ExploreMore = () => {
 
   return (
     <div className="py-12 px-4 md:px-12">
-      <h2 className="text-center text-3xl md:text-4xl font-semibold text-gray-900 mb-10">
+      <h2 className="text-center text-3xl md:text-4xl font-normal text-gray-900 mb-10">
         Explore More
       </h2>
 

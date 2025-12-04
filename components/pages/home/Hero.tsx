@@ -22,11 +22,11 @@ const Hero = () => {
               sm:items-center sm:text-center
               sm:bottom-1/2 sm:translate-y-1/2">
           
-        <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-light leading-tight">
+        <h1 className="text-3xl sm:text-4xl text-left md:text-6xl lg:text-7xl font-light leading-tight">
           Elevate Your Style
         </h1>
         
-        <p className="mt-3 text-lg sm:text-xl md:text-2xl lg:text-3xl">
+        <p className="mt-3 text-lg sm:text-xl md:text-2xl lg:text-3xl text-left">
           Discover the latest trends & exclusive fashion collections. Shop now and redefine your wardrobe!
         </p>
         

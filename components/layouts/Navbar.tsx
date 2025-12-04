@@ -1,20 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Heart, ShoppingCart, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Heart, ShoppingCart, User, LogOut } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CartPanel } from "./CartPanel";
 import { SearchPanel } from "./SearchPanel";
 import { WishlistPanel } from "./WishlistPanel";
+import { checkAuth } from "@/utils/checkAuth";
 
 export const Navbar = () => {
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const router = useRouter();
 
   const openPanel = (panel: string) => setActivePanel(panel);
   const closePanel = () => setActivePanel(null);
 
   const categories = ["Men", "Women", "Sport", "Underwear", "Jeans"];
+
+  // ✅ Check authentication on mount
+  useEffect(() => {
+    const verifyAuth = async () => {
+      const authStatus = await checkAuth();
+      setIsAuthenticated(authStatus);
+    };
+    verifyAuth();
+  }, []);
+
+  // ✅ Logout Function
+  const handleLogout = async () => {
+    try {
+      await fetch("http://localhost:5000/api/auth/logout", {
+        method: "POST",
+        credentials: "include", // to clear refresh token cookie
+      });
+
+      localStorage.removeItem("accessToken");
+      setIsAuthenticated(false);
+      setProfileMenuOpen(false);
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <>
@@ -28,7 +58,7 @@ export const Navbar = () => {
             </h1>
           </div>
 
-          {/* Categories (Centered) */}
+          {/* Categories */}
           <div className="hidden md:flex flex-1 justify-center space-x-8">
             {categories.map((cat) => (
               <Link
@@ -41,7 +71,7 @@ export const Navbar = () => {
             ))}
           </div>
 
-          {/* Desktop Navigation (Right) */}
+          {/* Desktop Right Side */}
           <div className="hidden md:flex items-center space-x-4">
             <button
               className="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded transition"
@@ -85,74 +115,43 @@ export const Navbar = () => {
 
               {profileMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border shadow-lg rounded-md z-50">
-                  <button className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-100">
-                    <User className="h-4 w-4" />
-                    My Account
-                  </button>
-                  <button className="w-full px-4 py-2 hover:bg-gray-100 text-left">
-                    Settings
-                  </button>
-                  <button className="w-full px-4 py-2 hover:bg-gray-100 text-left">
-                    Orders
-                  </button>
-                  <div className="border-t" />
-                  <button className="w-full px-4 py-2 hover:bg-red-100 text-left text-red-600">
-                    Sign out
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile Navigation */}
-          <div className="flex md:hidden items-center space-x-2">
-            <button
-              className="p-2 hover:bg-gray-100 rounded transition"
-              onClick={() => openPanel("search")}
-            >
-              <Search className="h-4 w-4" />
-            </button>
-            <button
-              className="relative p-2 hover:bg-gray-100 rounded transition"
-              onClick={() => openPanel("wishlist")}
-            >
-              <Heart className="h-4 w-4" />
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
-                3
-              </span>
-            </button>
-            <button
-              className="relative p-2 hover:bg-gray-100 rounded transition"
-              onClick={() => openPanel("cart")}
-            >
-              <ShoppingCart className="h-4 w-4" />
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
-                2
-              </span>
-            </button>
-            <div className="relative">
-              <button
-                className="p-2 hover:bg-gray-100 rounded transition"
-                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              >
-                <User className="h-4 w-4" />
-              </button>
-              {profileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border shadow-lg rounded-md z-50">
-                  <button className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-100">
-                    <User className="h-4 w-4" />
-                    My Account
-                  </button>
-                  <button className="w-full px-4 py-2 hover:bg-gray-100 text-left">
-                    Settings
-                  </button>
-                  <button className="w-full px-4 py-2 hover:bg-gray-100 text-left">
-                    Orders
-                  </button>
-                  <div className="border-t" />
-                  <button className="w-full px-4 py-2 hover:bg-red-100 text-left text-red-600">
-                    Sign out
-                  </button>
+                  {isAuthenticated ? (
+                    <>
+                      <button className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-100">
+                        <User className="h-4 w-4" />
+                        My Account
+                      </button>
+                      <button className="w-full px-4 py-2 hover:bg-gray-100 text-left">
+                        Settings
+                      </button>
+                      <button className="w-full px-4 py-2 hover:bg-gray-100 text-left">
+                        Orders
+                      </button>
+                      <div className="border-t" />
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 w-full px-4 py-2 hover:bg-red-100 text-left text-red-600"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Sign out
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href="/login"
+                        className="block px-4 py-2 hover:bg-gray-100 text-left"
+                      >
+                        Login
+                      </Link>
+                      <Link
+                        href="/signup"
+                        className="block px-4 py-2 hover:bg-gray-100 text-left"
+                      >
+                        Sign Up
+                      </Link>
+                    </>
+                  )}
                 </div>
               )}
             </div>

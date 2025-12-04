@@ -1,3 +1,5 @@
+// C:\Next\j\project\jimmyStickman\components\ui\ProductCard.tsx
+
 import React, { useState, useRef } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";

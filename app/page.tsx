@@ -1,13 +1,16 @@
-import Home from '@/components/pages/home/Home'
-import React from 'react'
+import React from 'react';
+import Hero from '@/components/pages/home/Hero';
+import ExploreMore from '@/components/pages/home/ExploreMore';
+import MainContent from '@/components/pages/home/MainContent';
 
-
-const page = () => {
+const Page = () => {
   return (
     <>
-    <Home />
+      <Hero />
+      <MainContent />
+      <ExploreMore />
     </>
-  )
-}
+  );
+};
 
-export default page
+export default Page;
