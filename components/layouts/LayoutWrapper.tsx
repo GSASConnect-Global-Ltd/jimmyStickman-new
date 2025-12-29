@@ -6,9 +6,9 @@ import Footer from "@/components/footer/Footer";
 
 export default function LayoutWrapper({
   children,
-}: { //error: Type annotations can only be used in TypeScript files.ts(8010)
-  children: React.ReactNode;//error: Type annotations can only be used in TypeScript files.ts(8010) (property) children: ReactNode
-}) { //error: Type annotations can only be used in TypeScript files.ts(8010)
+}: { 
+  children: React.ReactNode;
+}) { 
   const pathname = usePathname();
 
   const excludedRoutes = ["/login", "/signup", "/verify"];

@@ -6,7 +6,7 @@ import React, { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import ProductCard from "./ProductCard";
 import { IProduct } from "@/types/product";
-import { fetchProducts, filterProducts } from "@/lib/api";
+import { fetchProducts, filterProducts } from "@/lib/api/product"; 
 
 const filtersList = ["Gender", "Category", "Size", "Color", "Price"];
 
@@ -31,7 +31,7 @@ const ProductsList = () => {
       try {
         setLoading(true);
         const data = await fetchProducts();
-        setProducts(data); //error:  Argument of type 'unknown' is not assignable to parameter of type 
+        setProducts(data); 
       } catch (err: any) {
         console.error(err);
         setError(err.message || "Failed to fetch products");

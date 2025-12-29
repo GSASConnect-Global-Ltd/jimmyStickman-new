@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import React, { useEffect } from "react"; // ✅ import React
 import { X, ShoppingCart, Plus, Minus, Trash2 } from "lucide-react";
+import { useCart } from "@/context/CartContext";
 
 interface CartPanelProps {
   isOpen: boolean;
@@ -9,7 +10,10 @@ interface CartPanelProps {
 }
 
 export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
-  useEffect(() => {
+  const { cartItems, loading, addItem, removeItem, clearCartItems } = useCart();
+
+  /* ---------------- Escape Handling ---------------- */
+  useEffect(() => { // ✅ now useEffect is imported
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -27,31 +31,18 @@ export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
 
   if (!isOpen) return null;
 
-  const cartItems = [
-    {
-      id: 1,
-      name: "Premium Coffee Mug",
-      price: 19.99,
-      quantity: 2,
-      image:
-        "https://images.unsplash.com/photo-1514228742587-6b1558fcf93a?w=300&h=300&fit=crop",
-    },
-    {
-      id: 2,
-      name: "Leather Notebook",
-      price: 24.99,
-      quantity: 1,
-      image:
-        "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&h=300&fit=crop",
-    },
-  ];
-
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + item.product.price * item.quantity,
     0
   );
-  const shipping = 9.99;
+  const shipping = cartItems.length > 0 ? 9.99 : 0;
   const total = subtotal + shipping;
+
+  const increaseQty = (productId: string) => addItem(productId, 1);
+  const decreaseQty = (productId: string, qty: number) => {
+    if (qty <= 1) return removeItem(productId);
+    addItem(productId, -1); // optional decrement if backend supports negative quantity
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -64,6 +55,7 @@ export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
       {/* Panel */}
       <div className="relative ml-auto h-full w-full sm:w-96 lg:w-[480px] bg-white shadow-2xl overflow-y-auto">
         <div className="flex h-full flex-col">
+
           {/* Header */}
           <div className="flex items-center justify-between border-b p-6">
             <div className="flex items-center gap-2">
@@ -73,49 +65,58 @@ export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
                 {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
               </span>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1 text-gray-500 hover:text-gray-700"
-            >
-              <X className="h-4 w-4" />
+            <button onClick={onClose}>
+              <X className="h-4 w-4 text-gray-500" />
             </button>
           </div>
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6">
-            {cartItems.length > 0 ? (
+            {loading ? (
+              <p className="text-center text-gray-500">Loading cart...</p>
+            ) : cartItems.length > 0 ? (
               <div className="space-y-4">
                 {cartItems.map((item) => (
                   <div
-                    key={item.id}
-                    className="flex gap-4 p-4 border rounded-lg hover:bg-gray-50 transition"
+                    key={item.product._id}
+                    className="flex gap-4 p-4 border rounded-lg"
                   >
                     <img
-                      src={item.image}
-                      alt={item.name}
+                      src={item.product.images?.[0]}
                       className="h-20 w-20 rounded-lg object-cover"
+                      alt={item.product.name}
                     />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-sm truncate">{item.name}</h3>
-                      <p className="text-lg font-semibold text-blue-600 mt-1">
-                        ${item.price.toFixed(2)}
+
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm truncate">
+                        {item.product.name}
+                      </h3>
+                      <p className="text-blue-600 font-semibold">
+                        ₦{item.product.price.toFixed(2)}
                       </p>
 
-                      {/* Quantity Controls */}
                       <div className="flex items-center justify-between mt-3">
                         <div className="flex items-center gap-2">
-                          <button className="h-8 w-8 border rounded text-gray-500 flex items-center justify-center">
-                            <Minus className="h-3 w-3" />
+                          <button
+                            onClick={() =>
+                              decreaseQty(item.product._id, item.quantity)
+                            }
+                          >
+                            <Minus className="h-4 w-4" />
                           </button>
-                          <span className="w-8 text-center text-sm font-medium">
-                            {item.quantity}
-                          </span>
-                          <button className="h-8 w-8 border rounded text-gray-500 flex items-center justify-center">
-                            <Plus className="h-3 w-3" />
+                          <span>{item.quantity}</span>
+                          <button
+                            onClick={() => increaseQty(item.product._id)}
+                          >
+                            <Plus className="h-4 w-4" />
                           </button>
                         </div>
-                        <button className="text-red-600 hover:text-red-800">
-                          <Trash2 className="h-3 w-3" />
+
+                        <button
+                          onClick={() => removeItem(item.product._id)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
@@ -123,35 +124,27 @@ export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <ShoppingCart className="h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium mb-2">Your cart is empty</h3>
-                <p className="text-gray-500 text-sm">
-                  Add items to your cart to continue shopping
-                </p>
-              </div>
+              <p className="text-center text-gray-500">
+                Your cart is empty
+              </p>
             )}
           </div>
 
-          {/* Footer - Summary */}
+          {/* Footer */}
           {cartItems.length > 0 && (
             <div className="border-t p-6 space-y-4">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Shipping</span>
-                  <span>${shipping.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-base font-semibold border-t pt-2">
-                  <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
-                </div>
+              <div className="flex justify-between">
+                <span>Total</span>
+                <span className="font-semibold">₦{total.toFixed(2)}</span>
               </div>
-              <button className="w-full h-12 bg-blue-600 text-white font-medium rounded hover:bg-blue-700">
+              <button className="w-full h-12 bg-blue-600 text-white rounded">
                 Proceed to Checkout
+              </button>
+              <button
+                onClick={clearCartItems}
+                className="w-full h-10 border border-red-500 text-red-500 rounded mt-2"
+              >
+                Clear Cart
               </button>
             </div>
           )}

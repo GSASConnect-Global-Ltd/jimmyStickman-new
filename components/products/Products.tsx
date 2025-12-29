@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import ProductCard from "@/components/products/ProductCard";
 import { IProduct } from "@/types/product";
-import { fetchProducts } from "@/lib/api";
+import { fetchProducts } from "@/lib/api/product";
 
 const Products = () => {
   const [products, setProducts] = useState<IProduct[]>([]);

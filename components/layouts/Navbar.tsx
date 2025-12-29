@@ -8,11 +8,19 @@ import { CartPanel } from "./CartPanel";
 import { SearchPanel } from "./SearchPanel";
 import { WishlistPanel } from "./WishlistPanel";
 import { checkAuth } from "@/utils/checkAuth";
+import { fetchWishlist } from "@/lib/api";
+
+import { useWishlist } from "@/context/WishlistContext";
+
+
 
 export const Navbar = () => {
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+   const { count: wishlistCount } = useWishlist();
+
   const router = useRouter();
 
   const openPanel = (panel: string) => setActivePanel(panel);
@@ -22,12 +30,31 @@ export const Navbar = () => {
 
   // ✅ Check authentication on mount
   useEffect(() => {
-    const verifyAuth = async () => {
-      const authStatus = await checkAuth();
-      setIsAuthenticated(authStatus);
-    };
-    verifyAuth();
-  }, []);
+  const verifyAuth = async () => {
+    const authStatus = await checkAuth();
+    setIsAuthenticated(authStatus);
+
+    if (authStatus) {
+      try {
+        const wishlist = await fetchWishlist();
+      } catch (error) {
+        console.error("Failed to fetch wishlist count:", error);
+      }
+    }
+  };
+  verifyAuth();
+}, []);
+
+// const refreshWishlistCount = async () => {
+//   try {
+//     const wishlist = await fetchWishlist();
+//     setWishlistCount(wishlist.products.length);
+//   } catch (error) {
+//     console.error("Failed to fetch wishlist count:", error);
+//   }
+// };
+
+
 
   // ✅ Logout Function
   const handleLogout = async () => {
@@ -88,7 +115,7 @@ export const Navbar = () => {
               <Heart className="h-4 w-4" />
               <span>Wishlist</span>
               <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
-                3
+                {wishlistCount}
               </span>
             </button>
 

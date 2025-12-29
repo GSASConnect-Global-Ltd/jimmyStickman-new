@@ -6,11 +6,16 @@ import { useRouter } from "next/navigation";
 import { LucideFacebook, LucideApple } from "lucide-react";
 import { FcGoogle } from "react-icons/fc";
 
+import { loginUser, getUser } from "@/lib/api/auth";
+
 export default function LoginPage() {
   const router = useRouter();
 
-  // State
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -18,35 +23,32 @@ export default function LoginPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle Login
+  // ==========================
+  // HANDLE LOGIN
+  // ==========================
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
 
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",   // ⭐ Required to receive cookies
-        body: JSON.stringify(formData),
-      });
+      // 1️⃣ Login
+      await loginUser(formData);
 
-      const data = await res.json();
+      // 2️⃣ Verify user session (cookie-based)
+      const user = await getUser();
 
-      if (!res.ok) {
-        setMessage(data.message || "Login failed. Please try again.");
-      } else {
-        setMessage("Login successful! Redirecting...");
-
-        // Access Token comes in the JSON response
-        // Refresh Token comes as httpOnly cookie (auto handled by browser)
-
-        setTimeout(() => router.push("/dashboard"), 1500);
+      if (!user) {
+        throw new Error("Authentication failed");
       }
-    } catch (error) {
+
+      setMessage("Login successful! Redirecting...");
+
+      // 3️⃣ Redirect
+      setTimeout(() => router.push("/"), 1200);
+    } catch (error: any) {
       console.error("Login error:", error);
-      setMessage("Unable to connect to server. Please try again later.");
+      setMessage(error.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -55,7 +57,7 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen flex bg-gradient-to-br from-black via-gray-900 to-[#2d046e] text-white overflow-hidden">
       
-      {/* Left Section */}
+      {/* LEFT */}
       <div className="flex-1 flex flex-col justify-center items-start pl-20 z-10">
         <h1 className="text-5xl mb-6">JimmyStickman</h1>
         <div className="flex flex-col gap-4 text-gray-400 text-lg">
@@ -67,7 +69,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Section */}
+      {/* RIGHT */}
       <div className="flex-1 flex justify-center items-center relative z-10">
         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm rounded-3xl"></div>
 
@@ -105,11 +107,13 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Messages */}
+          {/* MESSAGE */}
           {message && (
             <p
               className={`mt-4 text-center text-sm ${
-                message.includes("successful") ? "text-green-400" : "text-red-400"
+                message.includes("successful")
+                  ? "text-green-400"
+                  : "text-red-400"
               }`}
             >
               {message}
@@ -120,12 +124,13 @@ export default function LoginPage() {
             <span className="text-sm">OR</span>
           </div>
 
-          {/* Social Login */}
+          {/* SOCIAL */}
           <div className="flex justify-center gap-6 text-2xl">
             <FcGoogle
               className="cursor-pointer hover:scale-110 transition"
               onClick={() =>
-                (window.location.href = "http://localhost:5000/api/auth/google")
+                (window.location.href =
+                  "http://localhost:5000/api/auth/google")
               }
             />
             <LucideFacebook
@@ -151,7 +156,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Model Image */}
+      {/* MODEL IMAGE */}
       <div className="absolute inset-y-0 right-[40%] flex justify-center items-center w-[700px]">
         <div className="absolute w-[600px] h-[600px] bg-purple-600/20 blur-3xl rounded-full"></div>
 

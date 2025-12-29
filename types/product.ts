@@ -6,7 +6,8 @@ export interface IProductColor {
 }
 
 export interface IProduct {
-  _id?: string;
+   _id?: string;
+  id?: string;
   name: string;
   description?: string;
   price: number | string;
@@ -19,4 +20,19 @@ export interface IProduct {
   sku?: string;
   images: string[];
   offer?: string;
+}
+
+
+
+
+
+export interface IWishlistItem {
+  product: IProduct;
+  variant?: { size?: string; color?: string };
+  addedAt?: string;
+}
+
+export interface IWishlist {
+  wishlistId: string;
+  products: IWishlistItem[];
 }
