@@ -64,7 +64,7 @@ export default function ProductDetails({ product, onWishlistUpdate }: ProductDet
           Color: <span className="opacity-70">{color}</span>
         </p>
         <div className="flex gap-2 mt-2">
-          {product.colors?.map((c) => (
+          {/* {product.colors?.map((c) => (
             <button
               key={c.name}
               className={`w-8 h-8 rounded-full border ${color === c.name ? "border-black" : "border-gray-300"}`}
@@ -72,12 +72,27 @@ export default function ProductDetails({ product, onWishlistUpdate }: ProductDet
               onClick={() => setColor(c.name)}
               title={c.name}
             />
-          ))}
+          ))} */}
+
+
+
+          {product.colors?.map((c, index) => (
+  <button
+    key={`${c.name}-${c.value}-${index}`}
+    className={`w-8 h-8 rounded-full border ${
+      color === c.name ? "border-black" : "border-gray-300"
+    }`}
+    style={{ backgroundColor: c.value }}
+    onClick={() => setColor(c.name)}
+    title={c.name}
+  />
+))}
+
         </div>
       </div>
 
       {/* Sizes */}
-      {product.sizes && product.sizes.length > 0 && (
+      {/* {product.sizes && product.sizes.length > 0 && (
         <div>
           <p className="font-medium">Size</p>
           <div className="grid grid-cols-4 gap-3 mt-2">
@@ -92,7 +107,18 @@ export default function ProductDetails({ product, onWishlistUpdate }: ProductDet
             ))}
           </div>
         </div>
-      )}
+      )} */}
+
+      {product.sizes?.map((s, index) => (
+  <Button
+    key={`${s}-${index}`}
+    variant={size === s ? "default" : "outline"}
+    onClick={() => setSize(s)}
+  >
+    {s}
+  </Button>
+))}
+
 
       <Separator />
 

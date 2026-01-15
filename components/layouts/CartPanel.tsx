@@ -1,4 +1,5 @@
 "use client";
+import { useRouter } from "next/navigation";
 
 import React, { useEffect } from "react"; // ✅ import React
 import { X, ShoppingCart, Plus, Minus, Trash2 } from "lucide-react";
@@ -11,7 +12,7 @@ interface CartPanelProps {
 
 export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
   const { cartItems, loading, addItem, removeItem, clearCartItems } = useCart();
-
+  const router = useRouter();
   /* ---------------- Escape Handling ---------------- */
   useEffect(() => { // ✅ now useEffect is imported
     const handleEscape = (e: KeyboardEvent) => {
@@ -137,9 +138,16 @@ export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
                 <span>Total</span>
                 <span className="font-semibold">₦{total.toFixed(2)}</span>
               </div>
-              <button className="w-full h-12 bg-blue-600 text-white rounded">
+              <button
+                className="w-full h-12 bg-blue-600 text-white rounded"
+                onClick={() => {
+                  onClose();
+                  router.push("/checkout");
+                }}
+              >
                 Proceed to Checkout
               </button>
+
               <button
                 onClick={clearCartItems}
                 className="w-full h-10 border border-red-500 text-red-500 rounded mt-2"
