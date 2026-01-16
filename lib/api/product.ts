@@ -1,6 +1,7 @@
 import axios from "axios";
 
-export const API_BASE = "http://localhost:5000/api";
+export const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/api`;
+
 import { IProduct, IWishlist } from "@/types/product";
 
 
@@ -33,3 +34,14 @@ export const searchProducts = async (query: Record<string, any>) => {
   const res = await axios.get(`${API_BASE}/products/search?${params}`);
   return res.data;
 };
+
+export const fetchSearchSuggestions = async (query: string): Promise<IProduct[]> => {
+  if (!query) return [];
+
+  const res = await axios.get<IProduct[]>(`${API_BASE}/products/search`, {
+    params: { name: query },
+  });
+
+  return res.data; // now correctly typed as IProduct[]
+};
+

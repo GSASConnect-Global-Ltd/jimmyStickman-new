@@ -8,64 +8,59 @@ import { CartPanel } from "./CartPanel";
 import { SearchPanel } from "./SearchPanel";
 import { WishlistPanel } from "./WishlistPanel";
 import { checkAuth } from "@/utils/checkAuth";
-import { fetchWishlist } from "@/lib/api";
-
+import { getUser } from "@/lib/api/auth";
 import { useWishlist } from "@/context/WishlistContext";
 
-
+const Backend_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export const Navbar = () => {
   const [activePanel, setActivePanel] = useState<string | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-   const { count: wishlistCount } = useWishlist();
+  const [user, setUser] = useState<{ name: string; email: string } | null>(
+    null
+  );
 
+  const { count: wishlistCount } = useWishlist();
   const router = useRouter();
 
   const openPanel = (panel: string) => setActivePanel(panel);
   const closePanel = () => setActivePanel(null);
 
-  const categories = ["Men", "Women", "Sport", "Underwear", "Jeans"];
-
-  // ✅ Check authentication on mount
-  useEffect(() => {
+ useEffect(() => {
   const verifyAuth = async () => {
-    const authStatus = await checkAuth();
-    setIsAuthenticated(authStatus);
+    console.log("🚀 Navbar: verifying authentication...");
 
-    if (authStatus) {
-      try {
-        const wishlist = await fetchWishlist();
-      } catch (error) {
-        console.error("Failed to fetch wishlist count:", error);
-      }
+    const userData = await checkAuth();
+
+    if (userData) {
+      console.log("🟢 Navbar: user logged in");
+      console.log("👤 User data:", userData);
+
+      setIsAuthenticated(true);
+      setUser(userData);
+    } else {
+      console.log("🔴 Navbar: user NOT logged in");
+
+      setIsAuthenticated(false);
+      setUser(null);
     }
   };
+
   verifyAuth();
 }, []);
 
-// const refreshWishlistCount = async () => {
-//   try {
-//     const wishlist = await fetchWishlist();
-//     setWishlistCount(wishlist.products.length);
-//   } catch (error) {
-//     console.error("Failed to fetch wishlist count:", error);
-//   }
-// };
 
 
-
-  // ✅ Logout Function
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:5000/api/auth/logout", {
+      await fetch(`${Backend_URL}/api/auth/logout`, {
         method: "POST",
-        credentials: "include", // to clear refresh token cookie
+        credentials: "include",
       });
-
       localStorage.removeItem("accessToken");
       setIsAuthenticated(false);
+      setUser(null);
       setProfileMenuOpen(false);
       router.push("/login");
     } catch (error) {
@@ -77,7 +72,6 @@ export const Navbar = () => {
     <>
       <nav className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          
           {/* Logo */}
           <div className="flex items-center">
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
@@ -85,32 +79,20 @@ export const Navbar = () => {
             </h1>
           </div>
 
-          {/* Categories */}
-          <div className="hidden md:flex flex-1 justify-center space-x-8">
-            {categories.map((cat) => (
-              <Link
-                key={cat}
-                href="/product"
-                className="text-gray-700 hover:text-black font-medium transition"
-              >
-                {cat}
-              </Link>
-            ))}
-          </div>
-
-          {/* Desktop Right Side */}
+          {/* Right Side */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Search, Wishlist, Cart */}
             <button
-              className="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded transition"
               onClick={() => openPanel("search")}
+              className="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded transition"
             >
               <Search className="h-4 w-4" />
               <span>Search</span>
             </button>
 
             <button
-              className="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded relative transition"
               onClick={() => openPanel("wishlist")}
+              className="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded relative transition"
             >
               <Heart className="h-4 w-4" />
               <span>Wishlist</span>
@@ -120,8 +102,8 @@ export const Navbar = () => {
             </button>
 
             <button
-              className="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded relative transition"
               onClick={() => openPanel("cart")}
+              className="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded relative transition"
             >
               <ShoppingCart className="h-4 w-4" />
               <span>Cart</span>
@@ -130,50 +112,55 @@ export const Navbar = () => {
               </span>
             </button>
 
-            {/* Profile Dropdown */}
-            <div className="relative">
+            {/* Profile */}
+            {/* <div className="relative">
               <button
                 className="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded transition"
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
               >
                 <User className="h-4 w-4" />
-                <span>Profile</span>
+                <span>{isAuthenticated ? user?.name : "Profile"}</span>
               </button>
 
               {profileMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border shadow-lg rounded-md z-50">
                   {isAuthenticated ? (
                     <>
-                      <button className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-100">
-                        <User className="h-4 w-4" />
+                      <div className="px-4 py-2 border-b">
+                        <p className="font-medium">{user?.name}</p>
+                        <p className="text-xs text-gray-500">{user?.email}</p>
+                      </div>
+                      <Link
+                        href="/account"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                      >
                         My Account
-                      </button>
-                      <button className="w-full px-4 py-2 hover:bg-gray-100 text-left">
-                        Settings
-                      </button>
-                      <button className="w-full px-4 py-2 hover:bg-gray-100 text-left">
+                      </Link>
+                      <Link
+                        href="/orders"
+                        className="block px-4 py-2 hover:bg-gray-100"
+                      >
                         Orders
-                      </button>
+                      </Link>
                       <div className="border-t" />
                       <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2 w-full px-4 py-2 hover:bg-red-100 text-left text-red-600"
+                        className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-100"
                       >
-                        <LogOut className="h-4 w-4" />
-                        Sign out
+                        Sign Out
                       </button>
                     </>
                   ) : (
                     <>
                       <Link
                         href="/login"
-                        className="block px-4 py-2 hover:bg-gray-100 text-left"
+                        className="block px-4 py-2 hover:bg-gray-100"
                       >
                         Login
                       </Link>
                       <Link
                         href="/signup"
-                        className="block px-4 py-2 hover:bg-gray-100 text-left"
+                        className="block px-4 py-2 hover:bg-gray-100"
                       >
                         Sign Up
                       </Link>
@@ -181,7 +168,57 @@ export const Navbar = () => {
                   )}
                 </div>
               )}
-            </div>
+            </div> */}
+
+            {/* Profile Dropdown */}
+<div className="relative">
+  <button
+    className="flex items-center gap-2 px-3 py-1 hover:bg-gray-100 rounded transition"
+    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+  >
+    <User className="h-4 w-4" />
+    <span>Profile</span>
+  </button>
+
+  {profileMenuOpen && (
+    <div className="absolute right-0 mt-2 w-48 bg-white border shadow-lg rounded-md z-50">
+      {isAuthenticated ? (
+        <>
+          <Link
+            href="/account"
+            className="block px-4 py-2 hover:bg-gray-100"
+          >
+            My Account
+          </Link>
+          <div className="border-t" />
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 w-full px-4 py-2 hover:bg-red-100 text-left text-red-600"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </button>
+        </>
+      ) : (
+        <>
+          <Link
+            href="/login"
+            className="block px-4 py-2 hover:bg-gray-100 text-left"
+          >
+            Login
+          </Link>
+          <Link
+            href="/signup"
+            className="block px-4 py-2 hover:bg-gray-100 text-left"
+          >
+            Sign Up
+          </Link>
+        </>
+      )}
+    </div>
+  )}
+</div>
+
           </div>
         </div>
       </nav>

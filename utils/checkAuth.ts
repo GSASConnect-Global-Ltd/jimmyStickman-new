@@ -1,21 +1,28 @@
-// utils/checkAuth.ts
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
+
 export async function checkAuth() {
-  const token = localStorage.getItem("accessToken");
-  if (!token) return false;
+  console.log("🔍 checkAuth() called");
 
   try {
-    const res = await fetch("http://localhost:5000/api/protected", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    const res = await fetch(`${API_BASE_URL}/api/auth/user`, {
+      method: "GET",
+      credentials: "include", // send cookies
+      cache: "no-store",
     });
 
-    if (!res.ok) return false;
+    console.log("📡 Auth response status:", res.status);
+
+    if (!res.ok) {
+      console.log("❌ User NOT authenticated");
+      return null;
+    }
+
     const data = await res.json();
-    console.log("🔐 Authenticated user:", data);
-    return true;
+    console.log("✅ User authenticated:", data);
+
+    return data; // user object
   } catch (err) {
-    console.error("Auth check failed:", err);
-    return false;
+    console.error("🔥 Auth check crashed:", err);
+    return null;
   }
 }

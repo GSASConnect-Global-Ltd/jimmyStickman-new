@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { X, Search, TrendingUp, Star } from "lucide-react";
+import { searchProducts } from "@/lib/api/product"; // your API function
+import { IProduct } from "@/types/product";
+import { useRouter } from "next/navigation"; // next/router in Next.js 13 pages
 
 interface SearchPanelProps {
   isOpen: boolean;
@@ -9,6 +13,23 @@ interface SearchPanelProps {
 }
 
 export const SearchPanel = ({ isOpen, onClose }: SearchPanelProps) => {
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<IProduct[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
+  const router = useRouter();
+
+  const handleSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  if (e.key === "Enter" && query.trim()) {
+    onClose(); // close panel
+    router.push(`/product?search=${encodeURIComponent(query.trim())}`);
+  }
+};
+
+
+  // Handle Escape key and scrolling
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -25,7 +46,39 @@ export const SearchPanel = ({ isOpen, onClose }: SearchPanelProps) => {
     };
   }, [isOpen, onClose]);
 
+  // Fetch suggestions as user types (debounce 300ms)
+  useEffect(() => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    // inside the useEffect
+const timeout = setTimeout(async () => {
+  try {
+    setLoading(true);
+    const results = await searchProducts({ name: query });
+
+    // Ensure TypeScript knows it's IProduct[]
+    if (Array.isArray(results)) {
+      setSuggestions(results as IProduct[]);
+    } else {
+      setSuggestions([]);
+    }
+  } catch (error) {
+    console.error("Search error:", error);
+    setSuggestions([]); // fallback to empty array on error
+  } finally {
+    setLoading(false);
+  }
+}, 300);
+
+    return () => clearTimeout(timeout);
+  }, [query]);
+
   if (!isOpen) return null;
+
+
 
   const trendingSearches = [
     "Summer Collection",
@@ -84,79 +137,139 @@ export const SearchPanel = ({ isOpen, onClose }: SearchPanelProps) => {
           <div className="p-6">
             <div className="relative mb-6">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              {/* <input
+                type="text"
+                placeholder="What are you looking for..."
+                className="pl-10 h-12 w-full border rounded-md text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              /> */}
+
               <input
                 type="text"
                 placeholder="What are you looking for..."
                 className="pl-10 h-12 w-full border rounded-md text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleSubmit} // ✅ add this
               />
+
             </div>
 
-            {/* Trending Searches */}
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-4 w-4 text-blue-600" />
-                <h3 className="font-medium text-sm">Trending Now</h3>
-              </div>
+            {/* If user is typing, show suggestions */}
+            {query ? (
               <div className="space-y-2">
-                {trendingSearches.map((search, index) => (
-                  <button
-                    key={index}
-                    className="block w-full text-left p-2 rounded hover:bg-gray-100 text-sm transition"
-                  >
-                    {search}
-                  </button>
-                ))}
+                {loading ? (
+                  <p className="text-gray-500 text-sm">Loading...</p>
+                ) : suggestions.length > 0 ? (
+                  <ul className="space-y-2">
+                    {suggestions.map((product) => (
+                      <li
+                        key={product._id}
+                        className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 cursor-pointer"
+                      >
+                        {/* Product Image */}
+                         <Link href={`/product/${product._id}`} className="flex items-center gap-3 w-full">
+                         <img
+                          src={
+                            product.images?.[0]
+                              ? `${API_BASE}${product.images[0]}`
+                              : "/placeholder.png"
+                          }
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded-md"
+                        />
+
+                        {/* Name and Price */}
+                        <div className="flex flex-col">
+                          <span className="text-gray-800 font-medium text-sm">
+                            {product.name}
+                          </span>
+                          <span className="text-red-500 font-semibold text-sm">
+                            N{product.price}
+                          </span>
+                        </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 text-sm">No products found</p>
+                )}
               </div>
-            </div>
-
-            {/* Popular Categories */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Popular Categories
-              </h3>
-              <ul className="text-gray-600">
-                {popularCategories.map((category, index) => (
-                  <li
-                    key={index}
-                    className="py-1 hover:text-black cursor-pointer"
-                  >
-                    {category}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Featured Best Sellers */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Featured Best Sellers
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                {featuredProducts.map((product, index) => (
-                  <div
-                    key={index}
-                    className="bg-white p-3 rounded-lg shadow-md"
-                  >
-                    <img
-                      src={product.image}
-                      alt={product.title}
-                      className="w-full h-32 object-cover rounded-md"
-                    />
-                    <p className="mt-2 font-medium text-gray-800">
-                      {product.title}
-                    </p>
-                    <p className="text-red-500 font-semibold">{product.price}</p>
-                    <p className="flex items-center text-yellow-500">
-                      {Array.from({ length: product.rating }, (_, i) => (
-                        <Star key={i} className="h-4 w-4 mr-1" />
-                      ))}
-                      <span className="text-gray-600 text-sm ml-1">(5)</span>
-                    </p>
+            ) : (
+              <>
+                {/* Trending Searches */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-4 w-4 text-blue-600" />
+                    <h3 className="font-medium text-sm">Trending Now</h3>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div className="space-y-2">
+                    {trendingSearches.map((search, index) => (
+                      <button
+                        key={index}
+                        className="block w-full text-left p-2 rounded hover:bg-gray-100 text-sm transition"
+                      >
+                        {search}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Popular Categories */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                    Popular Categories
+                  </h3>
+                  <ul className="text-gray-600">
+                    {popularCategories.map((category, index) => (
+                      <li
+                        key={index}
+                        className="py-1 hover:text-black cursor-pointer"
+                      >
+                        {category}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Featured Best Sellers */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                    Featured Best Sellers
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {featuredProducts.map((product, index) => (
+                      <div
+                        key={index}
+                        className="bg-white p-3 rounded-lg shadow-md"
+                      >
+                        <img
+                          src={product.image}
+                          alt={product.title}
+                          className="w-full h-32 object-cover rounded-md"
+                        />
+                        <p className="mt-2 font-medium text-gray-800">
+                          {product.title}
+                        </p>
+                        <p className="text-red-500 font-semibold">
+                          {product.price}
+                        </p>
+                        <p className="flex items-center text-yellow-500">
+                          {Array.from({ length: product.rating }, (_, i) => (
+                            <Star key={i} className="h-4 w-4 mr-1" />
+                          ))}
+                          <span className="text-gray-600 text-sm ml-1">(5)</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

@@ -2,7 +2,8 @@
 import axios from "axios";
 import { IWishlist } from "@/types/product";
 
-const API_BASE = "http://localhost:5000/api";
+export const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/api`;
+
 
 export const fetchWishlist = async (): Promise<IWishlist> => {
   const res = await axios.get<IWishlist>(`${API_BASE}/wishlist`, {

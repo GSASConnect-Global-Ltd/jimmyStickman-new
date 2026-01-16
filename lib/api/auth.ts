@@ -1,5 +1,6 @@
 // lib/api/auth.ts
-export const API_BASE = "http://localhost:5000/api";
+export const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/api`;
+
 
 export async function registerUser(data: {
   name: string;

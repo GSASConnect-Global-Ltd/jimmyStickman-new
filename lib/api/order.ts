@@ -1,7 +1,9 @@
-const API_URL = "http://localhost:5000/api";
+
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL}/api`;
+
 
 export async function getOrderStatus(orderId: string) {
-  const res = await fetch(`http://localhost:5000/api/orders/${orderId}`, {
+  const res = await fetch(`${API_URL}/orders/${orderId}`, {
     credentials: "include",
     cache: "no-store",
   });

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL!;
+
 interface OrderItem {
   productId: string;
   name: string;
@@ -44,7 +46,7 @@ export default function TrackOrderPage() {
     setOrder(null);
 
     try {
-      const res = await fetch(`localhost:5000/api/orders/track/${orderId}`);
+      const res = await fetch(`${API_BASE_URL}/api/orders/track/${orderId}`);
       if (!res.ok) throw new Error("Order not found");
 
       const data = await res.json();

@@ -1,6 +1,7 @@
 // C:\Next\j\project\jimmyStickman\components\products\ProductsList.tsx
 
 "use client";
+import { useSearchParams } from "next/navigation";
 
 import React, { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -11,6 +12,9 @@ import { fetchProducts, filterProducts } from "@/lib/api/product";
 const filtersList = ["Gender", "Category", "Size", "Color", "Price"];
 
 const ProductsList = () => {
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get("search") || "";
+
   const [products, setProducts] = useState<IProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,22 +30,49 @@ const ProductsList = () => {
     maxPrice: "",
   });
 
-  useEffect(() => {
-    const getProducts = async () => {
-      try {
-        setLoading(true);
-        const data = await fetchProducts();
-        setProducts(data); 
-      } catch (err: any) {
-        console.error(err);
-        setError(err.message || "Failed to fetch products");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // useEffect(() => {
+  //   const getProducts = async () => {
+  //     try {
+  //       setLoading(true);
+  //       const data = await fetchProducts();
+  //       setProducts(data); 
+  //     } catch (err: any) {
+  //       console.error(err);
+  //       setError(err.message || "Failed to fetch products");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
-    getProducts();
-  }, []);
+  //   getProducts();
+  // }, []);
+
+
+  useEffect(() => {
+  const getProducts = async () => {
+    try {
+      setLoading(true);
+
+      let data;
+      if (searchQuery) {
+        // If coming from search
+        data = await filterProducts({ name: searchQuery });
+      } else {
+        data = await fetchProducts();
+      }
+
+      setProducts(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to fetch products");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  getProducts();
+}, [searchQuery]);
+
 
   // Handle filter changes
   const handleFilterChange = (key: string, value: any) => {
@@ -100,7 +131,10 @@ const getActiveFilters = () => {
 
   return (
     <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
-      <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">All Products</h2>
+      <h2 className="text-3xl md:text-4xl font-light text-gray-800 mb-6">
+  {searchQuery ? `Search results for "${searchQuery}"` : "All Products"}
+</h2>
+
 
       {/* Filter Button */}
       <div className="flex justify-between items-center mb-4">
@@ -144,11 +178,13 @@ const getActiveFilters = () => {
 
 
       {/* Products Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        {products.map((p) => (
-          <ProductCard key={p._id || p._id} product={p} />
-        ))}
-      </div>
+      {/* Products Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-12 mt-8">
+          {products.map((p) => (
+            <ProductCard key={p._id} product={p} />
+          ))}
+        </div>
+
 
       {/* Filters Drawer */}
       <Sheet open={open} onOpenChange={setOpen}>

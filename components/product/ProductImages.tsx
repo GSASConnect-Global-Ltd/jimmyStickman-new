@@ -1,6 +1,12 @@
 "use client";
 
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
+
+const Backend_URL = process.env.NEXT_PUBLIC_API_URL!;
 
 export default function ProductImages({ images }: { images: string[] }) {
   return (
@@ -10,12 +16,13 @@ export default function ProductImages({ images }: { images: string[] }) {
         <Carousel>
           <CarouselContent>
             {images.map((img, i) => {
-              console.log(`Mobile image URL: http://localhost:5000${img}`);
+              console.log(`Mobile image URL: ${Backend_URL}${img}`);
               return (
                 <CarouselItem key={i}>
                   <img
-                    src={`http://localhost:5000${img}`}
+                    src={`${Backend_URL}${img}`}
                     className="w-full h-[500px] object-cover"
+                    alt={`Product image ${i + 1}`}
                   />
                 </CarouselItem>
               );
@@ -27,12 +34,13 @@ export default function ProductImages({ images }: { images: string[] }) {
       {/* desktop scroll */}
       <div className="hidden md:block max-h-[600px] overflow-y-scroll space-y-3 scrollbar-hide">
         {images.map((img, i) => {
-           console.log(`Desktop image URL: http://localhost:5000${img}`);
+          console.log(`Desktop image URL: ${Backend_URL}${img}`);
           return (
             <img
               key={i}
-              src={`http://localhost:5000${img}`}
+              src={`${Backend_URL}${img}`}
               className="w-full rounded-md h-[500px] object-cover"
+              alt={`Product image ${i + 1}`}
             />
           );
         })}

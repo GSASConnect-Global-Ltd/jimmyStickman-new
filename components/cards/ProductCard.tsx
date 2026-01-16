@@ -5,7 +5,7 @@ import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carouse
 import { IProduct } from "@/types/product";
 
 
-const BackendURL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+const BackendURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 export default function ProductCard({ product, hideColors = false }: { product: IProduct; hideColors?: boolean }) {
   return (
     <Card className="p-2 hover:shadow-xl transition cursor-pointer">

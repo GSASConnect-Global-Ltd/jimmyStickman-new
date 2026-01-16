@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { CartResponse } from "@/types/cart";
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = `${process.env.NEXT_PUBLIC_API_URL}/api`;
 
 const cartAPI = axios.create({
   baseURL: `${API_BASE}/cart`,
