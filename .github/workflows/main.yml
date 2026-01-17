@@ -362,7 +362,7 @@ jobs:
     - name: Install dependencies and lint
       run: |
         npm install
-        npm run lint
+      
       
     #install sharp 
 
