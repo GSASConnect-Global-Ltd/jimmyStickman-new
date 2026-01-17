@@ -122,6 +122,69 @@
 #         "
 
 
+# name: Deploy Next.js
+# on:
+#   push:
+#     branches: [main, dev]
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#     - uses: actions/checkout@v3
+    
+#     - name: Setup SSH
+#       run: |
+#         echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/key
+#         chmod 600 /tmp/key
+        
+#     - name: Deploy
+#       run: |
+#         BRANCH="${{ github.ref_name }}"
+        
+#         # Set port based on branch
+#         if [ "$BRANCH" = "dev" ]; then
+#           PORT=6001
+#           APP_NAME="jimmystickman-dev"
+#         else
+#           PORT=6003
+#           APP_NAME="jimmystickman-prod"
+#         fi
+        
+#         echo "Deploying $APP_NAME on port $PORT"
+        
+#         ssh -i /tmp/key \
+#             -o StrictHostKeyChecking=no \
+#             ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+#           # Go to project
+#           cd /var/www/jimmystickman.com
+          
+#           # Update
+#           git pull origin $BRANCH
+          
+#           # Install
+#           npm ci --only=production
+#           npm install sharp
+          
+#           # Set port in env
+#           echo \"PORT=$PORT\" > .env.local
+#           echo \"NEXT_PUBLIC_APP_ENV=$BRANCH\" >> .env.local
+          
+#           # Build
+#           npm run build
+          
+#           # Stop any existing process on this port
+#           sudo lsof -ti:$PORT | xargs sudo kill -9 2>/dev/null || true
+          
+#           # Start/Restart with PM2
+#           pm2 delete $APP_NAME 2>/dev/null || true
+#           PORT=$PORT pm2 start npm --name \"$APP_NAME\" -- start
+          
+#           pm2 save
+          
+#           echo '✅ Deployed on port $PORT'
+#         "
+
 name: Deploy Next.js
 on:
   push:
@@ -142,21 +205,23 @@ jobs:
       run: |
         BRANCH="${{ github.ref_name }}"
         
-        # Set port based on branch
         if [ "$BRANCH" = "dev" ]; then
           PORT=6001
           APP_NAME="jimmystickman-dev"
+          ENV_SOURCE=".env.dev"
+          BUILD_ENV="development"
         else
           PORT=6003
           APP_NAME="jimmystickman-prod"
+          ENV_SOURCE=".env.prod"
+          BUILD_ENV="production"
         fi
         
-        echo "Deploying $APP_NAME on port $PORT"
+        echo "Deploying $APP_NAME on port $PORT from $ENV_SOURCE"
         
         ssh -i /tmp/key \
             -o StrictHostKeyChecking=no \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
-          # Go to project
           cd /var/www/jimmystickman.com
           
           # Update
@@ -166,21 +231,47 @@ jobs:
           npm ci --only=production
           npm install sharp
           
-          # Set port in env
-          echo \"PORT=$PORT\" > .env.local
-          echo \"NEXT_PUBLIC_APP_ENV=$BRANCH\" >> .env.local
+          # Create .env.local with source env + port
+          echo 'Creating .env.local...'
           
-          # Build
+          # Start with empty file
+          > .env.local
+          
+          # Copy all non-empty lines from source env file
+          if [ -f \"$ENV_SOURCE\" ]; then
+            # Filter out comments and empty lines, add to .env.local
+            grep -v '^#' \"$ENV_SOURCE\" | grep -v '^$' >> .env.local
+            echo \"✅ Merged variables from $ENV_SOURCE\"
+          else
+            echo \"⚠️  $ENV_SOURCE not found, using defaults\"
+          fi
+          
+          # Add/override specific variables
+          echo \"# Deployment overrides\" >> .env.local
+          echo \"PORT=$PORT\" >> .env.local
+          echo \"NEXT_PUBLIC_APP_ENV=$BUILD_ENV\" >> .env.local
+          
+          # For Next.js build, we need NODE_ENV=production
+          echo \"NODE_ENV=production\" >> .env.local
+          
+          # Display environment (hide sensitive values)
+          echo 'Environment variables (non-sensitive):'
+          grep -E \"^(PORT|NEXT_PUBLIC|NODE_ENV)\" .env.local || echo 'No public vars found'
+          
+          # Build with the environment
+          echo 'Building...'
           npm run build
           
-          # Stop any existing process on this port
+          # Stop port conflicts
           sudo lsof -ti:$PORT | xargs sudo kill -9 2>/dev/null || true
           
-          # Start/Restart with PM2
+          # Start PM2 with the environment
           pm2 delete $APP_NAME 2>/dev/null || true
-          PORT=$PORT pm2 start npm --name \"$APP_NAME\" -- start
+          
+          # Load env vars and start
+          export \$(grep -v '^#' .env.local | xargs)
+          pm2 start npm --name \"$APP_NAME\" -- start
           
           pm2 save
-          
-          echo '✅ Deployed on port $PORT'
+          echo '✅ Deployed on port $PORT using $ENV_SOURCE'
         "
