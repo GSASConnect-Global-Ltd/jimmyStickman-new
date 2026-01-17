@@ -447,7 +447,7 @@ jobs:
           git pull origin ${{ github.ref_name }} &&
           
           # Install dependencies
-          npm ci --only=production &&
+          npm install &&
           npm install sharp &&
           
           # Build based on branch
