@@ -75,6 +75,53 @@
 #           sudo /bin/systemctl restart nginx  # Restart Nginx to apply changes
 #         "
 
+# name: Deploy Next.js
+# on:
+#   push:
+#     branches: [main, dev]
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#     - uses: actions/checkout@v3
+    
+#     - name: Setup SSH
+#       run: |
+#         echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/key
+#         chmod 600 /tmp/key
+        
+#     - name: Deploy
+#       run: |
+#         BRANCH="${{ github.ref_name }}"
+        
+#         ssh -i /tmp/key \
+#             -o StrictHostKeyChecking=no \
+#             ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+#           # Go to project
+#           cd /var/www/jimmystickman.com
+          
+#           # Update
+#           git pull origin $BRANCH
+          
+#           # Install
+#           npm ci --only=production
+#           npm install sharp
+          
+#           # Build
+#           npm run build
+          
+#           # Restart
+#           pm2 restart jimmystickman-$BRANCH 2>/dev/null || \
+#           pm2 start npm --name \"jimmystickman-$BRANCH\" -- start
+          
+#           # Reload Nginx
+#           sudo systemctl reload nginx
+          
+#           echo '✅ Next.js deployed!'
+#         "
+
+
 name: Deploy Next.js
 on:
   push:
@@ -95,6 +142,17 @@ jobs:
       run: |
         BRANCH="${{ github.ref_name }}"
         
+        # Set port based on branch
+        if [ "$BRANCH" = "dev" ]; then
+          PORT=6001
+          APP_NAME="jimmystickman-dev"
+        else
+          PORT=6003
+          APP_NAME="jimmystickman-prod"
+        fi
+        
+        echo "Deploying $APP_NAME on port $PORT"
+        
         ssh -i /tmp/key \
             -o StrictHostKeyChecking=no \
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
@@ -108,15 +166,21 @@ jobs:
           npm ci --only=production
           npm install sharp
           
+          # Set port in env
+          echo \"PORT=$PORT\" > .env.local
+          echo \"NEXT_PUBLIC_APP_ENV=$BRANCH\" >> .env.local
+          
           # Build
           npm run build
           
-          # Restart
-          pm2 restart jimmystickman-$BRANCH 2>/dev/null || \
-          pm2 start npm --name \"jimmystickman-$BRANCH\" -- start
+          # Stop any existing process on this port
+          sudo lsof -ti:$PORT | xargs sudo kill -9 2>/dev/null || true
           
-          # Reload Nginx
-          sudo systemctl reload nginx
+          # Start/Restart with PM2
+          pm2 delete $APP_NAME 2>/dev/null || true
+          PORT=$PORT pm2 start npm --name \"$APP_NAME\" -- start
           
-          echo '✅ Next.js deployed!'
+          pm2 save
+          
+          echo '✅ Deployed on port $PORT'
         "
