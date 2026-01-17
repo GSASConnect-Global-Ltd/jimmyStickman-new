@@ -276,60 +276,137 @@
 #           echo '✅ Deployed on port $PORT using $ENV_SOURCE'
 #         "
 
-name: Deploy Next.js
+# name: Deploy Next.js
+# on:
+#   push:
+#     branches: [main, dev]
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#     - uses: actions/checkout@v3
+    
+#     - name: Setup SSH
+#       uses: webfactory/ssh-agent@v0.5.3
+#       with:
+#          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+  
+#     - name: Deploy
+#       run: |
+#         BRANCH="${{ github.ref_name }}"
+        
+#         if [ "$BRANCH" = "dev" ]; then
+#           PORT=6001
+#           APP_NAME="jimmystickman-dev"
+#           ENV_SOURCE=".env.dev"
+#           BUILD_SCRIPT="build:dev"
+#           START_SCRIPT="start:dev"
+#         else
+#           PORT=6003
+#           APP_NAME="jimmystickman-prod"
+#           ENV_SOURCE=".env.prod"
+#           BUILD_SCRIPT="build:prod"
+#           START_SCRIPT="start:prod"
+#         fi
+        
+#         echo "Deploying $APP_NAME using $START_SCRIPT"
+        
+#         ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+#           cd /var/www/jimmystickman.com
+          
+#           git pull origin $BRANCH
+#           npm ci --only=production
+#           npm install sharp
+          
+#           # Copy env file
+#           [ -f \"$ENV_SOURCE\" ] && cp \"$ENV_SOURCE\" .env.local
+          
+#           # Build
+#           npm run $BUILD_SCRIPT
+          
+#           # Stop and start
+#           sudo lsof -ti:$PORT | xargs sudo kill -9 2>/dev/null || true
+#           pm2 delete $APP_NAME 2>/dev/null || true
+#           pm2 start npm --name \"$APP_NAME\" -- run $START_SCRIPT
+          
+#           pm2 save
+#           echo '✅ Deployed using $START_SCRIPT on port $PORT'
+#         "
+
+name: Deploy Frontend to VPS
+
 on:
   push:
-    branches: [main, dev]
+    branches:
+      - main
+      - dev
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup SSH
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up SSH
       uses: webfactory/ssh-agent@v0.5.3
       with:
-         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-  
-    - name: Deploy
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Add VPS to known_hosts
       run: |
-        BRANCH="${{ github.ref_name }}"
-        
-        if [ "$BRANCH" = "dev" ]; then
-          PORT=6001
-          APP_NAME="jimmystickman-dev"
-          ENV_SOURCE=".env.dev"
-          BUILD_SCRIPT="build:dev"
-          START_SCRIPT="start:dev"
-        else
-          PORT=6003
-          APP_NAME="jimmystickman-prod"
-          ENV_SOURCE=".env.prod"
-          BUILD_SCRIPT="build:prod"
-          START_SCRIPT="start:prod"
-        fi
-        
-        echo "Deploying $APP_NAME using $START_SCRIPT"
-        
+        ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
+    - name: Install dependencies and lint
+      run: |
+        npm install
+        npm run lint
+      
+    #install sharp 
+
+    # - name: Install sharp for image optimization
+    #   run: |
+    #     npm install sharp
+  
+    - name: Update Browserslist database
+      run: |
+        npx update-browserslist-db@latest
+
+    - name: Deploy to VPS
+      run: |
         ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
-          cd /var/www/jimmystickman.com
-          
-          git pull origin $BRANCH
-          npm ci --only=production
-          npm install sharp
-          
-          # Copy env file
-          [ -f \"$ENV_SOURCE\" ] && cp \"$ENV_SOURCE\" .env.local
-          
-          # Build
-          npm run $BUILD_SCRIPT
-          
-          # Stop and start
-          sudo lsof -ti:$PORT | xargs sudo kill -9 2>/dev/null || true
-          pm2 delete $APP_NAME 2>/dev/null || true
-          pm2 start npm --name \"$APP_NAME\" -- run $START_SCRIPT
-          
-          pm2 save
-          echo '✅ Deployed using $START_SCRIPT on port $PORT'
+          cd /var/www/orrelfx.com &&  # Single directory for both environments
+          git reset --hard &&
+          git pull origin ${{ github.ref_name }} &&  # Pull from the correct branch (dev or main)
+          npm install &&
+
+          if [ \"${{ github.ref_name }}\" == \"dev\" ]; then
+            # Load environment variables from .env.dev
+            export \$(grep -v '^#' .env.dev | xargs) && 
+            BUILD_DIR=build-dev NODE_ENV=production npm run build:dev &&
+
+            # Check if the jimmystickman-dev process exists, then restart, otherwise start it
+            if pm2 describe jimmystickman-dev > /dev/null; then
+              pm2 restart jimmystickman-dev
+            else
+              pm2 start npm --name \"jimmystickman-dev\" -- run start:dev  # Start dev process
+            fi
+            pm2 save
+          else
+            # Load environment variables from .env.prod
+            export \$(grep -v '^#' .env.prod | xargs) && 
+            NODE_ENV=production npm run build:prod &&  # Build for production
+
+            # Check if the jimmystickman-prod process exists, then restart, otherwise start it
+            if pm2 describe jimmystickman-prod > /dev/null; then
+              pm2 restart jimmystickman-prod
+            else
+              pm2 start npm --name \"jimmystickman-prod\" -- run start:prod --port 6003  # Start prod process
+            fi
+            pm2 save
+          fi
+
+          sudo /bin/systemctl restart nginx  # Restart Nginx to apply changes
         "
