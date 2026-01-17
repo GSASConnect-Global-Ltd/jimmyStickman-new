@@ -312,9 +312,7 @@ jobs:
         
         echo "Deploying $APP_NAME using $START_SCRIPT"
         
-        ssh -i /tmp/key \
-            -o StrictHostKeyChecking=no \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+        ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
           cd /var/www/jimmystickman.com
           
           git pull origin $BRANCH
