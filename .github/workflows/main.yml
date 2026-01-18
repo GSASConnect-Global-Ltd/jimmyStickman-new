@@ -442,8 +442,8 @@ jobs:
           cd /var/www/jimmystickman.com &&
           
           # Clean git state
-          git reset --hard HEAD &&
-          git clean -fd &&
+          # git reset --hard HEAD &&
+          # git clean -fd &&
           git pull origin ${{ github.ref_name }} &&
           
           # Install dependencies
