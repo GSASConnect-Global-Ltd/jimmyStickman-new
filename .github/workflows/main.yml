@@ -502,7 +502,7 @@ jobs:
 
     - name: Install dependencies and build locally
       run: |
-        npm ci
+        npm install
         npm install sharp
         
         # Set correct environment file
