@@ -411,7 +411,74 @@
 #           sudo /bin/systemctl restart nginx  # Restart Nginx to apply changes
 #         "
 
-name: Deploy Frontend to VPS
+# name: Deploy Frontend to VPS
+
+# on:
+#   push:
+#     branches:
+#       - main
+#       - dev
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v2
+
+#     - name: Set up SSH
+#       uses: webfactory/ssh-agent@v0.5.3
+#       with:
+#         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+#     - name: Add VPS to known_hosts
+#       run: |
+#         ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
+#     - name: Deploy to VPS
+#       run: |
+#         ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+#           cd /var/www/jimmystickman.com &&
+          
+#           # Clean git state
+#           # git reset --hard HEAD &&
+#           # git clean -fd &&
+#           git pull origin ${{ github.ref_name }} &&
+          
+#           # Install dependencies
+#           npm install &&
+#           npm install sharp &&
+          
+#           # Build based on branch
+#           if [ '${{ github.ref_name }}' = 'dev' ]; then
+#             # Copy environment file
+#             [ -f .env.dev ] && cp .env.dev .env.local || echo '.env.dev not found'
+            
+#             # Build for development
+#             BUILD_DIR=build-dev NODE_ENV=production npm run build:dev
+            
+#             # PM2 management
+#             pm2 delete jimmystickman-dev 2>/dev/null || true
+#             pm2 start npm --name 'jimmystickman-dev' -- run start:dev
+#           else
+#             # Copy environment file
+#             [ -f .env.prod ] && cp .env.prod .env.local || echo '.env.prod not found'
+            
+#             # Build for production
+#             NODE_ENV=production npm run build:prod
+            
+#             # PM2 management
+#             pm2 delete jimmystickman-prod 2>/dev/null || true
+#             pm2 start npm --name 'jimmystickman-prod' -- run start:prod
+#           fi
+          
+#           pm2 save
+#           sudo systemctl restart nginx
+#           echo '✅ Deployment completed successfully!'
+#         "
+
+name: Deploy Frontend to VPS Optimized
 
 on:
   push:
@@ -425,55 +492,73 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies and build locally
+      run: |
+        npm ci
+        npm install sharp
+        
+        # Set correct environment file
+        if [ "${{ github.ref_name }}" = "dev" ]; then
+          [ -f .env.dev ] && cp .env.dev .env.local || echo '.env.dev not found'
+          BUILD_DIR=build-dev NODE_ENV=production npm run build:dev
+        else
+          [ -f .env.prod ] && cp .env.prod .env.local || echo '.env.prod not found'
+          NODE_ENV=production npm run build:prod
+        fi
+        
+        # Create deployment package
+        mkdir -p deploy
+        cp -r .next public package.json package-lock.json next.config.js .env.local deploy/
+        tar -czf deploy.tar.gz deploy/
 
     - name: Set up SSH
-      uses: webfactory/ssh-agent@v0.5.3
+      uses: webfactory/ssh-agent@v0.7.0
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
     - name: Add VPS to known_hosts
       run: |
+        mkdir -p ~/.ssh
         ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
 
-    - name: Deploy to VPS
+    - name: Deploy built files
       run: |
-        ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+        # Copy built files
+        scp -o ServerAliveInterval=30 deploy.tar.gz \
+          ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/var/www/jimmystickman.com/
+        
+        # Extract and restart
+        ssh -o ServerAliveInterval=30 ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
           cd /var/www/jimmystickman.com &&
           
-          # Clean git state
-          # git reset --hard HEAD &&
-          # git clean -fd &&
-          git pull origin ${{ github.ref_name }} &&
+          # Backup current
+          tar -czf backup-$(date +%Y%m%d-%H%M%S).tar.gz .next package.json .env.local 2>/dev/null || true
           
-          # Install dependencies
-          npm install &&
-          npm install sharp &&
+          # Extract new
+          tar -xzf deploy.tar.gz --strip-components=1 &&
+          rm deploy.tar.gz
           
-          # Build based on branch
+          # Install only production dependencies
+          npm ci --omit=dev
+          
+          # PM2 restart based on branch
           if [ '${{ github.ref_name }}' = 'dev' ]; then
-            # Copy environment file
-            [ -f .env.dev ] && cp .env.dev .env.local || echo '.env.dev not found'
-            
-            # Build for development
-            BUILD_DIR=build-dev NODE_ENV=production npm run build:dev
-            
-            # PM2 management
-            pm2 delete jimmystickman-dev 2>/dev/null || true
+            pm2 restart jimmystickman-dev || \
             pm2 start npm --name 'jimmystickman-dev' -- run start:dev
           else
-            # Copy environment file
-            [ -f .env.prod ] && cp .env.prod .env.local || echo '.env.prod not found'
-            
-            # Build for production
-            NODE_ENV=production npm run build:prod
-            
-            # PM2 management
-            pm2 delete jimmystickman-prod 2>/dev/null || true
+            pm2 restart jimmystickman-prod || \
             pm2 start npm --name 'jimmystickman-prod' -- run start:prod
           fi
           
           pm2 save
-          sudo systemctl restart nginx
+          sudo systemctl reload nginx
           echo '✅ Deployment completed successfully!'
         "
