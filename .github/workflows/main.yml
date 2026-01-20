@@ -661,10 +661,10 @@ jobs:
 
     - name: Add VPS to known_hosts
       run: |
-        mkdir -p ~/.ssh
-        chmod 700 ~/.ssh
+        # mkdir -p ~/.ssh
+        # chmod 700 ~/.ssh
         ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
-        chmod 600 ~/.ssh/known_hosts
+        # chmod 600 ~/.ssh/known_hosts
 
     - name: Deploy to VPS
       run: |
