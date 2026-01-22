@@ -1,0 +1,122 @@
+# name: Deploy Frontend to VPS
+
+# on:
+#   push:
+#     branches:
+#       - main
+#       - dev
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v2
+
+#     - name: Set up SSH
+#       uses: webfactory/ssh-agent@v0.5.3
+#       with:
+#         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+#     - name: Add VPS to known_hosts
+#       run: |
+#         ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
+#     - name: Install dependencies and lint
+#       run: |
+#         npm install
+#         npm run lint
+      
+#     #install sharp 
+
+#     # - name: Install sharp for image optimization
+#     #   run: |
+#     #     npm install sharp
+  
+#     - name: Update Browserslist database
+#       run: |
+#         npx update-browserslist-db@latest
+
+#     - name: Deploy to VPS
+#       run: |
+#         ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+#           cd /var/www/jimmystickman.com &&  # Single directory for both environments
+#           git reset --hard &&
+#           git pull origin ${{ github.ref_name }} &&  # Pull from the correct branch (dev or main)
+#           npm install &&
+
+#           if [ \"${{ github.ref_name }}\" == \"dev\" ]; then
+#             # Load environment variables from .env.dev
+#             export \$(grep -v '^#' .env.dev | xargs) && 
+#             BUILD_DIR=build-dev NODE_ENV=production npm run build:dev &&
+
+#             # Check if the jimmystickman-dev process exists, then restart, otherwise start it
+#             if pm2 describe jimmystickman-dev > /dev/null; then
+#               pm2 restart jimmystickman-dev
+#             else
+#               pm2 start npm --name \"jimmystickman-dev\" -- run start:dev  # Start dev process
+#             fi
+#             pm2 save
+#           else
+#             # Load environment variables from .env.prod
+#             export \$(grep -v '^#' .env.prod | xargs) && 
+#             NODE_ENV=production npm run build:prod &&  # Build for production
+
+#             # Check if the jimmystickman-prod process exists, then restart, otherwise start it
+#             if pm2 describe jimmystickman-prod > /dev/null; then
+#               pm2 restart jimmystickman-prod
+#             else
+#               pm2 start npm --name \"jimmystickman-prod\" -- run start:prod --port 3000  # Start prod process
+#             fi
+#             pm2 save
+#           fi
+
+#           sudo /bin/systemctl restart nginx  # Restart Nginx to apply changes
+#         "
+
+name: Deploy Next.js
+on:
+  push:
+    branches: [main, dev]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup SSH
+      run: |
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/key
+        chmod 600 /tmp/key
+        
+    - name: Deploy
+      run: |
+        BRANCH="${{ github.ref_name }}"
+        
+        ssh -i /tmp/key \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+          # Go to project
+          cd /var/www/jimmystickman.com
+          
+          # Update
+          git pull origin $BRANCH
+          
+          # Install
+          npm ci --only=production
+          npm install sharp
+          
+          # Build
+          npm run build
+          
+          # Restart
+          pm2 restart jimmystickman-$BRANCH 2>/dev/null || \
+          pm2 start npm --name \"jimmystickman-$BRANCH\" -- start
+          
+          # Reload Nginx
+          sudo systemctl reload nginx
+          
+          echo '✅ Next.js deployed!'
+        "
