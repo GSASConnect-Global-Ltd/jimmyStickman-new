@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import React, { useEffect } from "react"; // ✅ import React
 import { X, ShoppingCart, Plus, Minus, Trash2 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-
+import { toast } from "sonner";
 interface CartPanelProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,18 +32,37 @@ export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
 
   if (!isOpen) return null;
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  const subtotal = cartItems.reduce((sum, item) => {
+  if (!item.product) return sum;
+  return sum + item.product.price * item.quantity;
+}, 0);
+
   const shipping = cartItems.length > 0 ? 9.99 : 0;
   const total = subtotal + shipping;
 
-  const increaseQty = (productId: string) => addItem(productId, 1);
-  const decreaseQty = (productId: string, qty: number) => {
-    if (qty <= 1) return removeItem(productId);
-    addItem(productId, -1); // optional decrement if backend supports negative quantity
-  };
+  const increaseQty = async (productId: string) => {
+  try {
+    await addItem(productId, 1);
+    toast.success("Quantity increased");
+  } catch {
+    toast.error("Failed to increase quantity");
+  }
+};
+
+const decreaseQty = async (productId: string, qty: number) => {
+  try {
+    if (qty <= 1) {
+      await removeItem(productId);
+      toast.success("Item removed from cart");
+    } else {
+      await addItem(productId, -1); // only if your backend supports negative qty
+      toast.success("Quantity decreased");
+    }
+  } catch {
+    toast.error("Failed to decrease quantity");
+  }
+};
+
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -63,8 +82,10 @@ export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
               <ShoppingCart className="h-5 w-5 text-blue-600" />
               <h2 className="text-lg font-semibold">Shopping Cart</h2>
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
-                {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+                {cartItems.reduce((sum, item) => sum + (item.quantity ?? 0), 0)-1}
               </span>
+
+
             </div>
             <button onClick={onClose}>
               <X className="h-4 w-4 text-gray-500" />
@@ -77,13 +98,16 @@ export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
               <p className="text-center text-gray-500">Loading cart...</p>
             ) : cartItems.length > 0 ? (
               <div className="space-y-4">
-                {cartItems.map((item) => (
+                {/* {cartItems.map((item) => ( */}
+                {cartItems
+                  .filter(item => item.product)
+                  .map((item) => (
                   <div
                     key={item.product._id}
                     className="flex gap-4 p-4 border rounded-lg"
                   >
                     <img
-                      src={item.product.images?.[0]}
+                      src={`${process.env.NEXT_PUBLIC_API_URL}${item.product.images?.[0]}`}
                       className="h-20 w-20 rounded-lg object-cover"
                       alt={item.product.name}
                     />
@@ -114,11 +138,20 @@ export const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
                         </div>
 
                         <button
-                          onClick={() => removeItem(item.product._id)}
+                          onClick={() => {
+                            try {
+                              removeItem(item.product._id);
+                              toast.success("Item removed from cart");
+                            } catch (err) {
+                              console.error("Failed to remove item:", err);
+                              toast.error("Failed to remove item");
+                            }
+                          }}
                           className="text-red-600"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
+
                       </div>
                     </div>
                   </div>

@@ -38,7 +38,7 @@ export default function SignupPage() {
     const res = await registerUser({
       name: formData.name,
       email: formData.email,
-      password: formData.password,
+      // password: formData.password,
     });
 
     if (res?.error) {
@@ -74,54 +74,29 @@ export default function SignupPage() {
           <p className="text-gray-300 mb-6">Join the JimmyStickman family!</p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <input
-              type="text"
-              name="name"
-              placeholder="Full Name"
-              value={formData.name}
-              onChange={handleChange}
-              className="p-3 rounded-xl bg-transparent border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            />
+  <input
+    type="text"
+    name="name"
+    placeholder="Full Name"
+    value={formData.name}
+    onChange={handleChange}
+    required
+  />
 
-            <input
-              type="email"
-              name="email"
-              placeholder="Email address"
-              value={formData.email}
-              onChange={handleChange}
-              className="p-3 rounded-xl bg-transparent border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            />
+  <input
+    type="email"
+    name="email"
+    placeholder="Email address"
+    value={formData.email}
+    onChange={handleChange}
+    required
+  />
 
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleChange}
-              className="p-3 rounded-xl bg-transparent border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            />
+  <button type="submit" disabled={loading}>
+    {loading ? "Creating Account..." : "Create Account →"}
+  </button>
+</form>
 
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm Password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className="p-3 rounded-xl bg-transparent border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              required
-            />
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition disabled:opacity-50"
-            >
-              {loading ? "Creating Account..." : "Create Account →"}
-            </button>
-          </form>
 
           {message && (
             <p className="mt-4 text-center text-sm text-gray-300">{message}</p>
