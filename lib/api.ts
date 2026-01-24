@@ -8,11 +8,14 @@ import { IProduct, IWishlist } from "@/types/product";
 
 
 export async function registerUser(data: any) {
+  console.log("res", data)
+  console.log('API_BASE:', API_BASE);
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+  console.log("res", res)
   return res.json();
 }
 
