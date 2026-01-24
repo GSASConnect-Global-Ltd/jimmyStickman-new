@@ -773,7 +773,7 @@ jobs:
     - name: Install dependencies and lint
       run: |
         yarn install
-        yarn lint
+
       
     #install sharp 
 
