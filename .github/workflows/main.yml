@@ -822,6 +822,171 @@
 #           sudo /bin/systemctl restart nginx  # Restart Nginx to apply changes
 #         "
 
+# name: Deploy Frontend to VPS
+
+# on:
+#   push:
+#     branches:
+#       - main
+#       - dev
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Set up SSH
+#         uses: webfactory/ssh-agent@v0.7.0
+#         with:
+#           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+#       - name: Add VPS to known_hosts
+#         run: |
+#           ssh-keyscan -p 22222 ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
+#       - name: Install dependencies locally
+#         run: |
+#           npm ci
+#           npx update-browserslist-db@latest
+
+#       - name: Deploy to VPS
+#         run: |
+#           set -e
+          
+#           ssh -p 22222 ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+#             set -e
+            
+#             echo '🚀 ========== STARTING DEPLOYMENT =========='
+            
+#             # Define deployment directory
+#             DEPLOY_DIR=\"/var/www/jimmystickman.com\"
+            
+#             # Create directory if it doesn't exist
+#             if [ ! -d \"\$DEPLOY_DIR\" ]; then
+#               echo '📁 Creating deployment directory...'
+#               sudo mkdir -p \"\$DEPLOY_DIR\"
+#               sudo chown -R $USER:$USER \"\$DEPLOY_DIR\"
+#             fi
+            
+#             cd \"\$DEPLOY_DIR\"
+            
+#             echo '📂 Current directory:'
+#             pwd
+#             echo '📦 Directory contents before deployment:'
+#             ls -la
+            
+#             # Initialize git if needed
+#             if [ ! -d .git ]; then
+#               echo '🔧 Initializing git repository...'
+#               git init
+#               git remote add origin https://github.com/${{ github.repository }}.git
+#             fi
+            
+#             # Fetch and reset to latest code
+#             echo '⬇️ Fetching latest code...'
+#             git fetch origin
+#             git reset --hard origin/${{ github.ref_name }}
+            
+#             echo '📝 Latest commit:'
+#             git log --oneline -1
+            
+#             echo '🔧 Installing dependencies...'
+#             npm ci --omit=dev
+            
+#             echo '🏗️ Building application...'
+            
+#             if [ \"${{ github.ref_name }}\" == \"dev\" ]; then
+#               # ===== DEV BRANCH DEPLOYMENT =====
+#               echo '🎯 Deploying DEV environment...'
+              
+#               # Set environment variables
+#               if [ -f .env.dev ]; then
+#                 echo '📄 Using .env.dev file'
+#                 export \$(grep -v '^#' .env.dev | xargs)
+#               else
+#                 echo '⚠️ Warning: .env.dev not found'
+#               fi
+              
+#               # Build for dev
+#               BUILD_DIR=build-dev NODE_ENV=production npm run build:dev
+              
+#               # Restart PM2 process
+#               echo '🔄 Managing PM2 dev process...'
+#               pm2 delete jimmystickman-dev 2>/dev/null || true
+#               pm2 start npm --name \"jimmystickman-dev\" -- run start:dev
+              
+#             else
+#               # ===== MAIN BRANCH (PRODUCTION) DEPLOYMENT =====
+#               echo '🚀 Deploying PRODUCTION environment...'
+              
+#               # Set environment variables
+#               if [ -f .env.prod ]; then
+#                 echo '📄 Using .env.prod file'
+#                 export \$(grep -v '^#' .env.prod | xargs)
+#               else
+#                 echo '⚠️ Warning: .env.prod not found'
+#               fi
+              
+#               # Build for production
+#               NODE_ENV=production npm run build:prod
+              
+#               # Restart PM2 process
+#               echo '🔄 Managing PM2 production process...'
+#               pm2 delete jimmystickman-prod 2>/dev/null || true
+#               pm2 start npm --name \"jimmystickman-prod\" -- run start:prod
+#             fi
+            
+#             # Save PM2 configuration
+#             pm2 save
+            
+#             # Reload nginx
+#             echo '🌐 Reloading nginx...'
+#             sudo systemctl reload nginx
+            
+#             # ===== VERIFICATION =====
+#             echo '✅ ========== DEPLOYMENT COMPLETE =========='
+#             echo ''
+#             echo '📋 Verification:'
+#             echo '1. PM2 Status:'
+#             pm2 list | grep jimmystickman || echo 'No jimmystickman processes found'
+#             echo ''
+#             echo '2. Directory contents after deployment:'
+#             ls -la
+#             echo ''
+#             echo '3. Build directory exists:'
+#             [ -d .next ] && echo '✅ .next directory found' || echo '❌ .next directory missing'
+#             echo ''
+#             echo '4. Application is running on:'
+#             echo '   - Dev: http://dev.jimmystickman.com'
+#             echo '   - Prod: http://jimmystickman.com'
+#             echo ''
+#             echo '📊 Deployment Summary:'
+#             echo '   Branch: ${{ github.ref_name }}'
+#             echo '   Commit: ' \$(git log --oneline -1)
+#             echo '   Time: ' \$(date)
+#             echo '============================================'
+#           "
+          
+#           echo '🎉 GitHub Actions deployment workflow completed!'
+
+#       - name: Deployment Success Notification
+#         if: success()
+#         run: |
+#           echo '✅ Deployment successful!'
+#           echo 'Branch: ${{ github.ref_name }}'
+#           echo 'Commit: ${{ github.sha }}'
+
+#       - name: Deployment Failure Notification
+#         if: failure()
+#         run: |
+#           echo '❌ Deployment failed!'
+#           echo 'Please check the logs above for errors.'
+#           echo 'Branch: ${{ github.ref_name }}'
+#           echo 'Commit: ${{ github.sha }}'
+
 name: Deploy Frontend to VPS
 
 on:
@@ -847,10 +1012,6 @@ jobs:
         run: |
           ssh-keyscan -p 22222 ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
 
-      - name: Install dependencies locally
-        run: |
-          npm ci
-          npx update-browserslist-db@latest
 
       - name: Deploy to VPS
         run: |
@@ -861,10 +1022,8 @@ jobs:
             
             echo '🚀 ========== STARTING DEPLOYMENT =========='
             
-            # Define deployment directory
             DEPLOY_DIR=\"/var/www/jimmystickman.com\"
             
-            # Create directory if it doesn't exist
             if [ ! -d \"\$DEPLOY_DIR\" ]; then
               echo '📁 Creating deployment directory...'
               sudo mkdir -p \"\$DEPLOY_DIR\"
@@ -875,8 +1034,6 @@ jobs:
             
             echo '📂 Current directory:'
             pwd
-            echo '📦 Directory contents before deployment:'
-            ls -la
             
             # Initialize git if needed
             if [ ! -d .git ]; then
@@ -893,8 +1050,25 @@ jobs:
             echo '📝 Latest commit:'
             git log --oneline -1
             
-            echo '🔧 Installing dependencies...'
-            npm ci --omit=dev
+            # ===== CRITICAL FIX: INSTALL DEPENDENCIES BEFORE CHECKING FILES =====
+            echo '📦 Installing ALL dependencies...'
+            npm ci
+            
+            echo '🔍 Checking TypeScript configuration...'
+            if [ -f tsconfig.json ]; then
+              echo '📄 tsconfig.json found:'
+              cat tsconfig.json | grep -A 10 '"paths"'
+            elif [ -f jsconfig.json ]; then
+              echo '📄 jsconfig.json found:'
+              cat jsconfig.json | grep -A 10 '"paths"'
+            else
+              echo '⚠️ No TypeScript/JavaScript config found!'
+            fi
+            
+            echo '🔍 Checking if @/lib directory exists...'
+            find . -type d -name "lib" | head -5
+            ls -la ./lib/ 2>/dev/null || echo 'No ./lib directory'
+            ls -la ./src/lib/ 2>/dev/null || echo 'No ./src/lib directory'
             
             echo '🏗️ Building application...'
             
@@ -902,12 +1076,13 @@ jobs:
               # ===== DEV BRANCH DEPLOYMENT =====
               echo '🎯 Deploying DEV environment...'
               
-              # Set environment variables
+              # Use .env.dev if exists
               if [ -f .env.dev ]; then
                 echo '📄 Using .env.dev file'
-                export \$(grep -v '^#' .env.dev | xargs)
+                cp .env.dev .env.local
               else
-                echo '⚠️ Warning: .env.dev not found'
+                echo '⚠️ Warning: .env.dev not found, checking for .env'
+                [ -f .env ] && cp .env .env.local || echo 'No .env file found'
               fi
               
               # Build for dev
@@ -922,12 +1097,13 @@ jobs:
               # ===== MAIN BRANCH (PRODUCTION) DEPLOYMENT =====
               echo '🚀 Deploying PRODUCTION environment...'
               
-              # Set environment variables
+              # Use .env.prod if exists
               if [ -f .env.prod ]; then
                 echo '📄 Using .env.prod file'
-                export \$(grep -v '^#' .env.prod | xargs)
+                cp .env.prod .env.local
               else
-                echo '⚠️ Warning: .env.prod not found'
+                echo '⚠️ Warning: .env.prod not found, checking for .env'
+                [ -f .env ] && cp .env .env.local || echo 'No .env file found'
               fi
               
               # Build for production
@@ -939,51 +1115,11 @@ jobs:
               pm2 start npm --name \"jimmystickman-prod\" -- run start:prod
             fi
             
-            # Save PM2 configuration
             pm2 save
             
-            # Reload nginx
             echo '🌐 Reloading nginx...'
             sudo systemctl reload nginx
             
-            # ===== VERIFICATION =====
             echo '✅ ========== DEPLOYMENT COMPLETE =========='
-            echo ''
-            echo '📋 Verification:'
-            echo '1. PM2 Status:'
-            pm2 list | grep jimmystickman || echo 'No jimmystickman processes found'
-            echo ''
-            echo '2. Directory contents after deployment:'
-            ls -la
-            echo ''
-            echo '3. Build directory exists:'
-            [ -d .next ] && echo '✅ .next directory found' || echo '❌ .next directory missing'
-            echo ''
-            echo '4. Application is running on:'
-            echo '   - Dev: http://dev.jimmystickman.com'
-            echo '   - Prod: http://jimmystickman.com'
-            echo ''
-            echo '📊 Deployment Summary:'
-            echo '   Branch: ${{ github.ref_name }}'
-            echo '   Commit: ' \$(git log --oneline -1)
-            echo '   Time: ' \$(date)
-            echo '============================================'
           "
-          
-          echo '🎉 GitHub Actions deployment workflow completed!'
-
-      - name: Deployment Success Notification
-        if: success()
-        run: |
-          echo '✅ Deployment successful!'
-          echo 'Branch: ${{ github.ref_name }}'
-          echo 'Commit: ${{ github.sha }}'
-
-      - name: Deployment Failure Notification
-        if: failure()
-        run: |
-          echo '❌ Deployment failed!'
-          echo 'Please check the logs above for errors.'
-          echo 'Branch: ${{ github.ref_name }}'
-          echo 'Commit: ${{ github.sha }}'
 
