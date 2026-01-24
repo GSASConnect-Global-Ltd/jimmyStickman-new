@@ -787,7 +787,7 @@ jobs:
 
     - name: Deploy to VPS
       run: |
-        ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+        ssh -p 22222 ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
           cd /var/www/jimmystickman.com &&  # Single directory for both environments
           git reset --hard &&
           git pull origin ${{ github.ref_name }} &&  # Pull from the correct branch (dev or main)
