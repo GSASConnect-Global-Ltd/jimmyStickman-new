@@ -4,6 +4,7 @@ import "./globals.css";
 import LayoutWrapper from "@/components/layouts/LayoutWrapper";
 import Providers from "./providers";
 import { CartProvider } from "@/context/CartContext";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({
             <LayoutWrapper>{children}</LayoutWrapper>
           </CartProvider>
         </Providers>
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );

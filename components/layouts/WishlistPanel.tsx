@@ -7,14 +7,28 @@ import {
   removeFromWishlist,
   clearWishlist,
 } from "@/lib/api/wishlist";
+import { toast } from "sonner";
+
+// import { addToCart } from "@/lib/api/cart";
+
+import { useCart } from "@/context/CartContext";
+
 import { getUser } from "@/lib/api/auth";
-import { getWishlistId } from "@/lib/utils/wishlistId";
 import { IWishlistItem } from "@/types/product";
 
 interface WishlistPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
+type WishlistItemWithProduct = IWishlistItem & {
+  product: {
+    _id: string;
+    name: string;
+    price: number;
+    images?: string[];
+  };
+};
+
 
 interface DisplayItem {
   id: string;
@@ -28,8 +42,10 @@ export const WishlistPanel = ({ isOpen, onClose }: WishlistPanelProps) => {
   const [wishlistItems, setWishlistItems] = useState<DisplayItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const { addItem } = useCart();
 
-  const wishlistId = getWishlistId();
+
+
 
   // ===============================
   // LOAD USER + WISHLIST (SINGLE SOURCE)
@@ -51,6 +67,19 @@ export const WishlistPanel = ({ isOpen, onClose }: WishlistPanelProps) => {
     };
   }, [isOpen]);
 
+const handleAddToCart = async (productId: string) => {
+  try {
+    await addItem(productId, 1);
+    toast.success("Added to cart");
+  } catch {
+    toast.error("Failed to add item");
+  }
+};
+
+
+
+
+
   const loadUserAndWishlist = async () => {
     setLoading(true);
     try {
@@ -59,15 +88,30 @@ export const WishlistPanel = ({ isOpen, onClose }: WishlistPanelProps) => {
 
       const data = await fetchWishlist();
 
-      const items: DisplayItem[] = data.products.map(
-        (p: IWishlistItem) => ({
-          id: p.product._id || "",
-          name: p.product.name,
-          price: `₦${p.product.price}`,
-          image: p.product.images?.[0] || "",
-          variant: p.variant,
-        })
-      );
+      // const items: DisplayItem[] = data.products.map(
+      //   (p: IWishlistItem) => ({
+      //     id: p.product._id || "",
+      //     name: p.product.name,
+      //     price: `₦${p.product.price}`,
+      //     image: p.product.images?.[0] || "",
+      //     variant: p.variant,
+      //   })
+      // );
+
+      const items: DisplayItem[] = data.products
+  .filter(
+    (p): p is WishlistItemWithProduct => Boolean(p.product)
+  )
+  .map((p) => ({
+    id: p.product._id, // ✅ now strictly string
+    name: p.product.name,
+    price: `₦${p.product.price}`,
+    image: p.product.images?.[0] || "",
+    variant: p.variant,
+  }));
+
+setWishlistItems(items);
+
 
       setWishlistItems(items);
     } catch (err) {
@@ -78,13 +122,12 @@ export const WishlistPanel = ({ isOpen, onClose }: WishlistPanelProps) => {
     }
   };
 
-  // ===============================
-  // REMOVE ITEM
-  // ===============================
-  const handleRemove = async (
+const handleRemove = async (
   id: string,
   variant?: { size?: string; color?: string }
 ) => {
+  console.log("🗑️ Removing wishlist item:", { id, variant });
+
   try {
     const updated = await removeFromWishlist(
       id,
@@ -92,19 +135,37 @@ export const WishlistPanel = ({ isOpen, onClose }: WishlistPanelProps) => {
       variant?.color
     );
 
-    const items: DisplayItem[] = updated.products.map((p: IWishlistItem) => ({
-      id: p.product._id || "",
-      name: p.product.name,
-      price: `₦${p.product.price}`,
-      image: p.product.images?.[0] || "",
-      variant: p.variant,
-    }));
+    console.log("📦 Updated wishlist:", updated);
+
+    if (!updated || !Array.isArray(updated.products)) {
+      console.error("❌ Invalid wishlist response", updated);
+      toast.error("Failed to remove item");
+      return;
+    }
+
+    const items: DisplayItem[] = updated.products
+      .filter(
+        (p): p is WishlistItemWithProduct => Boolean(p.product)
+      )
+      .map((p) => ({
+        id: p.product._id,
+        name: p.product.name,
+        price: `₦${p.product.price}`,
+        image: p.product.images?.[0] || "",
+        variant: p.variant,
+      }));
 
     setWishlistItems(items);
+
+    // ✅ Show success toast
+    toast.success("Item removed from wishlist");
   } catch (err) {
-    console.error("Remove failed:", err);
+    console.error("❌ Remove failed:", err);
+    toast.error("Failed to remove item");
   }
 };
+
+
 
   // ===============================
   // CLEAR WISHLIST
@@ -158,7 +219,7 @@ export const WishlistPanel = ({ isOpen, onClose }: WishlistPanelProps) => {
                     className="flex gap-4 p-4 border rounded-lg hover:bg-gray-50 transition"
                   >
                     <img
-                      src={item.image}
+                      src={`${process.env.NEXT_PUBLIC_API_URL}${item.image}`}
                       alt={item.name}
                       className="h-20 w-20 rounded-lg object-cover"
                     />
@@ -171,10 +232,14 @@ export const WishlistPanel = ({ isOpen, onClose }: WishlistPanelProps) => {
                       </p>
 
                       <div className="flex gap-2 mt-3">
-                        <button className="flex-1 h-10 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleAddToCart(item.id)}
+                          className="flex-1 h-10 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center gap-2"
+                        >
                           <ShoppingCart className="h-4 w-4" />
                           Add to Cart
                         </button>
+
 
                         <button
                           onClick={() => handleRemove(item.id, item.variant)}
