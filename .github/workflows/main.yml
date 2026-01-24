@@ -563,187 +563,187 @@
 #           echo '✅ Deployment completed successfully!'
 #         "
 
-name: Deploy Frontend to VPS Optimized
+# name: Deploy Frontend to VPS Optimized
 
-on:
-  push:
-    branches:
-      - main
-      - dev
+# on:
+#   push:
+#     branches:
+#       - main
+#       - dev
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'npm'
+#     - name: Setup Node.js
+#       uses: actions/setup-node@v3
+#       with:
+#         node-version: '18'
+#         cache: 'npm'
 
-    - name: Install dependencies and build locally
-      run: |
-        npm ci
-        npm install sharp
+#     - name: Install dependencies and build locally
+#       run: |
+#         npm ci
+#         npm install sharp
         
-        # Set correct environment file based on branch
-        if [ "${{ github.ref_name }}" = "dev" ]; then
-          echo "Building for dev environment"
-          # Check if env file exists, if not create placeholder
-          if [ -f .env.dev ]; then
-            cp .env.dev .env.local
-            echo "Using .env.dev"
-          else
-            echo "WARNING: .env.dev not found, using .env.example if available"
-            [ -f .env.example ] && cp .env.example .env.local || true
-          fi
+#         # Set correct environment file based on branch
+#         if [ "${{ github.ref_name }}" = "dev" ]; then
+#           echo "Building for dev environment"
+#           # Check if env file exists, if not create placeholder
+#           if [ -f .env.dev ]; then
+#             cp .env.dev .env.local
+#             echo "Using .env.dev"
+#           else
+#             echo "WARNING: .env.dev not found, using .env.example if available"
+#             [ -f .env.example ] && cp .env.example .env.local || true
+#           fi
           
-          BUILD_DIR=build-dev NODE_ENV=production npm run build:dev
-        else
-          echo "Building for production environment"
-          if [ -f .env.prod ]; then
-            cp .env.prod .env.local
-            echo "Using .env.prod"
-          else
-            echo "WARNING: .env.prod not found, using .env.example if available"
-            [ -f .env.example ] && cp .env.example .env.local || true
-          fi
+#           BUILD_DIR=build-dev NODE_ENV=production npm run build:dev
+#         else
+#           echo "Building for production environment"
+#           if [ -f .env.prod ]; then
+#             cp .env.prod .env.local
+#             echo "Using .env.prod"
+#           else
+#             echo "WARNING: .env.prod not found, using .env.example if available"
+#             [ -f .env.example ] && cp .env.example .env.local || true
+#           fi
           
-          NODE_ENV=production npm run build:prod
-        fi
+#           NODE_ENV=production npm run build:prod
+#         fi
         
-        # Create deployment package with only necessary files
-        mkdir -p deploy
+#         # Create deployment package with only necessary files
+#         mkdir -p deploy
         
-        # Copy the built .next directory
-        cp -r .next/ deploy/.next/
+#         # Copy the built .next directory
+#         cp -r .next/ deploy/.next/
         
-        # Copy public directory if it exists
-        [ -d public ] && cp -r public/ deploy/public/
+#         # Copy public directory if it exists
+#         [ -d public ] && cp -r public/ deploy/public/
         
-        # Copy package files
-        cp package.json package-lock.json deploy/
+#         # Copy package files
+#         cp package.json package-lock.json deploy/
         
-        # Copy configuration files if they exist
-        [ -f next.config.js ] && cp next.config.js deploy/
-        [ -f next.config.mjs ] && cp next.config.mjs deploy/
-        [ -f next.config.ts ] && cp next.config.ts deploy/
+#         # Copy configuration files if they exist
+#         [ -f next.config.js ] && cp next.config.js deploy/
+#         [ -f next.config.mjs ] && cp next.config.mjs deploy/
+#         [ -f next.config.ts ] && cp next.config.ts deploy/
         
-        # Copy environment file if it was created
-        [ -f .env.local ] && cp .env.local deploy/
+#         # Copy environment file if it was created
+#         [ -f .env.local ] && cp .env.local deploy/
         
-        # Create a list of what we're deploying (for debugging)
-        find deploy -type f | head -20 > deploy-files.txt
+#         # Create a list of what we're deploying (for debugging)
+#         find deploy -type f | head -20 > deploy-files.txt
         
-        # Create deployment archive
-        tar -czf deploy.tar.gz deploy/
+#         # Create deployment archive
+#         tar -czf deploy.tar.gz deploy/
         
-        echo "Build completed successfully!"
-        echo "Deployment package created: $(du -h deploy.tar.gz | cut -f1)"
+#         echo "Build completed successfully!"
+#         echo "Deployment package created: $(du -h deploy.tar.gz | cut -f1)"
 
-    - name: Debug deployment files
-      run: |
-        echo "=== Deployment File Structure ==="
-        ls -la deploy/ || echo "No deploy directory"
-        echo "=== Files in deploy package ==="
-        cat deploy-files.txt || echo "No file list"
-        echo "=== Archive size ==="
-        ls -lh deploy.tar.gz || echo "No archive"
+#     - name: Debug deployment files
+#       run: |
+#         echo "=== Deployment File Structure ==="
+#         ls -la deploy/ || echo "No deploy directory"
+#         echo "=== Files in deploy package ==="
+#         cat deploy-files.txt || echo "No file list"
+#         echo "=== Archive size ==="
+#         ls -lh deploy.tar.gz || echo "No archive"
 
-    - name: Set up SSH
-      uses: webfactory/ssh-agent@v0.7.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+#     - name: Set up SSH
+#       uses: webfactory/ssh-agent@v0.7.0
+#       with:
+#         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Add VPS to known_hosts
-      run: |
-        mkdir -p ~/.ssh
-        chmod 700 ~/.ssh
-        ssh-keyscan -p 22222 ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
-        # ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
-        chmod 600 ~/.ssh/known_hosts
+#     - name: Add VPS to known_hosts
+#       run: |
+#         mkdir -p ~/.ssh
+#         chmod 700 ~/.ssh
+#         ssh-keyscan -p 22222 ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+#         # ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+#         chmod 600 ~/.ssh/known_hosts
 
-    - name: Deploy to VPS
-      run: |
-        echo "Starting deployment to VPS..."
+#     - name: Deploy to VPS
+#       run: |
+#         echo "Starting deployment to VPS..."
         
-        # First, ensure the directory exists on VPS
-        ssh -p 22222 -i ~/.ssh/vps_key \
-          -o ConnectTimeout=30 \
-          -o ServerAliveInterval=30 \
-          ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
-          mkdir -p /var/www/jimmystickman.com
-        "
+#         # First, ensure the directory exists on VPS
+#         ssh -p 22222 -i ~/.ssh/vps_key \
+#           -o ConnectTimeout=30 \
+#           -o ServerAliveInterval=30 \
+#           ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+#           mkdir -p /var/www/jimmystickman.com
+#         "
         
-        # Copy the deployment package
-        echo "Copying deployment package..."
-        scp -P 22222 -i ~/.ssh/vps_key \
-          -o ConnectTimeout=30 \
-          -o ServerAliveInterval=30 \
-          deploy.tar.gz \
-          ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/var/www/jimmystickman.com/
+#         # Copy the deployment package
+#         echo "Copying deployment package..."
+#         scp -P 22222 -i ~/.ssh/vps_key \
+#           -o ConnectTimeout=30 \
+#           -o ServerAliveInterval=30 \
+#           deploy.tar.gz \
+#           ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/var/www/jimmystickman.com/
         
-        # Execute deployment on VPS
-        echo "Executing deployment on VPS..."
-        ssh -p 22222 -i ~/.ssh/vps_key \
-          -o ConnectTimeout=30 \
-          -o ServerAliveInterval=30 \
-          ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
-          set -e  # Exit on any error
-          cd /var/www/jimmystickman.com
+#         # Execute deployment on VPS
+#         echo "Executing deployment on VPS..."
+#         ssh -p 22222 -i ~/.ssh/vps_key \
+#           -o ConnectTimeout=30 \
+#           -o ServerAliveInterval=30 \
+#           ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+#           set -e  # Exit on any error
+#           cd /var/www/jimmystickman.com
           
-          echo 'Current directory:'
-          pwd
-          ls -la
+#           echo 'Current directory:'
+#           pwd
+#           ls -la
           
-          # Create backup of current deployment
-          BACKUP_FILE=\"backup-\$(date +%Y%m%d-%H%M%S).tar.gz\"
-          echo \"Creating backup: \$BACKUP_FILE\"
-          tar -czf \"\$BACKUP_FILE\" .next package.json package-lock.json .env.local 2>/dev/null || echo 'No previous files to backup'
+#           # Create backup of current deployment
+#           BACKUP_FILE=\"backup-\$(date +%Y%m%d-%H%M%S).tar.gz\"
+#           echo \"Creating backup: \$BACKUP_FILE\"
+#           tar -czf \"\$BACKUP_FILE\" .next package.json package-lock.json .env.local 2>/dev/null || echo 'No previous files to backup'
           
-          # Remove old files (keep node_modules)
-          echo 'Cleaning old files...'
-          rm -rf .next package.json package-lock.json next.config.* .env.local
+#           # Remove old files (keep node_modules)
+#           echo 'Cleaning old files...'
+#           rm -rf .next package.json package-lock.json next.config.* .env.local
           
-          # Extract new deployment
-          echo 'Extracting new deployment...'
-          tar -xzf deploy.tar.gz --strip-components=1
-          rm deploy.tar.gz
+#           # Extract new deployment
+#           echo 'Extracting new deployment...'
+#           tar -xzf deploy.tar.gz --strip-components=1
+#           rm deploy.tar.gz
           
-          # Install dependencies
-          echo 'Installing dependencies...'
-          npm ci --omit=dev
+#           # Install dependencies
+#           echo 'Installing dependencies...'
+#           npm ci --omit=dev
           
-          # Restart PM2 based on branch
-          if [ '${{ github.ref_name }}' = 'dev' ]; then
-            echo 'Starting/Restarting dev instance...'
-            pm2 delete jimmystickman-dev 2>/dev/null || true
-            pm2 start npm --name 'jimmystickman-dev' -- run start:dev
-          else
-            echo 'Starting/Restarting prod instance...'
-            pm2 delete jimmystickman-prod 2>/dev/null || true
-            pm2 start npm --name 'jimmystickman-prod' -- run start:prod
-          fi
+#           # Restart PM2 based on branch
+#           if [ '${{ github.ref_name }}' = 'dev' ]; then
+#             echo 'Starting/Restarting dev instance...'
+#             pm2 delete jimmystickman-dev 2>/dev/null || true
+#             pm2 start npm --name 'jimmystickman-dev' -- run start:dev
+#           else
+#             echo 'Starting/Restarting prod instance...'
+#             pm2 delete jimmystickman-prod 2>/dev/null || true
+#             pm2 start npm --name 'jimmystickman-prod' -- run start:prod
+#           fi
           
-          pm2 save
+#           pm2 save
           
-          # Reload nginx
-          sudo systemctl reload nginx
+#           # Reload nginx
+#           sudo systemctl reload nginx
           
-          echo '✅ Deployment completed successfully!'
-          echo 'Backup created: ' \$BACKUP_FILE
-        "
+#           echo '✅ Deployment completed successfully!'
+#           echo 'Backup created: ' \$BACKUP_FILE
+#         "
         
-        echo "🚀 Deployment finished!"
+#         echo "🚀 Deployment finished!"
 
-    - name: Cleanup
-      if: always()
-      run: |
-        rm -rf deploy deploy.tar.gz deploy-files.txt
+#     - name: Cleanup
+#       if: always()
+#       run: |
+#         rm -rf deploy deploy.tar.gz deploy-files.txt
 
 # name: Deploy Frontend to VPS
 
@@ -821,3 +821,172 @@ jobs:
 
 #           sudo /bin/systemctl restart nginx  # Restart Nginx to apply changes
 #         "
+
+name: Deploy Frontend to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -p 22222 ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Install dependencies locally
+        run: |
+          npm ci
+          npx update-browserslist-db@latest
+
+      - name: Deploy to VPS
+        run: |
+          set -e
+          
+          ssh -p 22222 ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+            set -e
+            
+            echo '🚀 ========== STARTING DEPLOYMENT =========='
+            
+            # Define deployment directory
+            DEPLOY_DIR=\"/var/www/jimmystickman.com\"
+            
+            # Create directory if it doesn't exist
+            if [ ! -d \"\$DEPLOY_DIR\" ]; then
+              echo '📁 Creating deployment directory...'
+              sudo mkdir -p \"\$DEPLOY_DIR\"
+              sudo chown -R $USER:$USER \"\$DEPLOY_DIR\"
+            fi
+            
+            cd \"\$DEPLOY_DIR\"
+            
+            echo '📂 Current directory:'
+            pwd
+            echo '📦 Directory contents before deployment:'
+            ls -la
+            
+            # Initialize git if needed
+            if [ ! -d .git ]; then
+              echo '🔧 Initializing git repository...'
+              git init
+              git remote add origin https://github.com/${{ github.repository }}.git
+            fi
+            
+            # Fetch and reset to latest code
+            echo '⬇️ Fetching latest code...'
+            git fetch origin
+            git reset --hard origin/${{ github.ref_name }}
+            
+            echo '📝 Latest commit:'
+            git log --oneline -1
+            
+            echo '🔧 Installing dependencies...'
+            npm ci --omit=dev
+            
+            echo '🏗️ Building application...'
+            
+            if [ \"${{ github.ref_name }}\" == \"dev\" ]; then
+              # ===== DEV BRANCH DEPLOYMENT =====
+              echo '🎯 Deploying DEV environment...'
+              
+              # Set environment variables
+              if [ -f .env.dev ]; then
+                echo '📄 Using .env.dev file'
+                export \$(grep -v '^#' .env.dev | xargs)
+              else
+                echo '⚠️ Warning: .env.dev not found'
+              fi
+              
+              # Build for dev
+              BUILD_DIR=build-dev NODE_ENV=production npm run build:dev
+              
+              # Restart PM2 process
+              echo '🔄 Managing PM2 dev process...'
+              pm2 delete jimmystickman-dev 2>/dev/null || true
+              pm2 start npm --name \"jimmystickman-dev\" -- run start:dev
+              
+            else
+              # ===== MAIN BRANCH (PRODUCTION) DEPLOYMENT =====
+              echo '🚀 Deploying PRODUCTION environment...'
+              
+              # Set environment variables
+              if [ -f .env.prod ]; then
+                echo '📄 Using .env.prod file'
+                export \$(grep -v '^#' .env.prod | xargs)
+              else
+                echo '⚠️ Warning: .env.prod not found'
+              fi
+              
+              # Build for production
+              NODE_ENV=production npm run build:prod
+              
+              # Restart PM2 process
+              echo '🔄 Managing PM2 production process...'
+              pm2 delete jimmystickman-prod 2>/dev/null || true
+              pm2 start npm --name \"jimmystickman-prod\" -- run start:prod
+            fi
+            
+            # Save PM2 configuration
+            pm2 save
+            
+            # Reload nginx
+            echo '🌐 Reloading nginx...'
+            sudo systemctl reload nginx
+            
+            # ===== VERIFICATION =====
+            echo '✅ ========== DEPLOYMENT COMPLETE =========='
+            echo ''
+            echo '📋 Verification:'
+            echo '1. PM2 Status:'
+            pm2 list | grep jimmystickman || echo 'No jimmystickman processes found'
+            echo ''
+            echo '2. Directory contents after deployment:'
+            ls -la
+            echo ''
+            echo '3. Build directory exists:'
+            [ -d .next ] && echo '✅ .next directory found' || echo '❌ .next directory missing'
+            echo ''
+            echo '4. Application is running on:'
+            echo '   - Dev: http://dev.jimmystickman.com'
+            echo '   - Prod: http://jimmystickman.com'
+            echo ''
+            echo '📊 Deployment Summary:'
+            echo '   Branch: ${{ github.ref_name }}'
+            echo '   Commit: ' \$(git log --oneline -1)
+            echo '   Time: ' \$(date)
+            echo '============================================'
+          "
+          
+          echo '🎉 GitHub Actions deployment workflow completed!'
+
+      - name: Deployment Success Notification
+        if: success()
+        run: |
+          echo '✅ Deployment successful!'
+          echo 'Branch: ${{ github.ref_name }}'
+          echo 'Commit: ${{ github.sha }}'
+
+      - name: Deployment Failure Notification
+        if: failure()
+        run: |
+          echo '❌ Deployment failed!'
+          echo 'Please check the logs above for errors.'
+          echo 'Branch: ${{ github.ref_name }}'
+          echo 'Commit: ${{ github.sha }}'
+
