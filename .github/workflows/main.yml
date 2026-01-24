@@ -845,10 +845,7 @@ jobs:
 
       - name: Add VPS to known_hosts
         run: |
-          # mkdir -p ~/.ssh
-          # chmod 700 ~/.ssh
           ssh-keyscan -p 22222 ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
 
       - name: Install dependencies locally
         run: |
