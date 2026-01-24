@@ -7,6 +7,7 @@ export async function registerUser(data: {
   email: string;
   password: string;
 }) {
+  console.log("API BASE:", API_BASE);
   const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
