@@ -672,20 +672,20 @@ jobs:
         echo "Starting deployment to VPS..."
         
         # First, ensure the directory exists on VPS
-        ssh -o ConnectTimeout=30 -o ServerAliveInterval=30 \
+        ssh -p 22222 ConnectTimeout=30 -o ServerAliveInterval=30 \
           ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
           mkdir -p /var/www/jimmystickman.com
         "
         
         # Copy the deployment package
         echo "Copying deployment package..."
-        scp -o ConnectTimeout=30 -o ServerAliveInterval=30 \
+        scp -p 22222 ConnectTimeout=30 -o ServerAliveInterval=30 \
           deploy.tar.gz \
           ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:/var/www/jimmystickman.com/
         
         # Execute deployment on VPS
         echo "Executing deployment on VPS..."
-        ssh -o ConnectTimeout=30 -o ServerAliveInterval=30 \
+        ssh -p 22222 ConnectTimeout=30 -o ServerAliveInterval=30 \
           ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
           set -e  # Exit on any error
           cd /var/www/jimmystickman.com
