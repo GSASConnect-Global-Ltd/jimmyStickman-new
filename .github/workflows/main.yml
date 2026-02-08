@@ -1,136 +1,507 @@
-name: Deploy Frontend to VPS
+# name: Deploy Frontend to VPS
+
+# on:
+#   push:
+#     branches:
+#       - main
+#       - dev
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Set up SSH
+#         uses: webfactory/ssh-agent@v0.7.0
+#         with:
+#           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+#       - name: Add VPS to known_hosts
+#         run: |
+#           ssh-keyscan -p 22222 ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
+
+#       - name: Deploy to VPS
+#         run: |
+#           set -e
+          
+#           ssh -p 22222 ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
+#             set -e
+            
+#             echo '🚀 ========== STARTING DEPLOYMENT =========='
+            
+#             DEPLOY_DIR=\"/var/www/jimmystickman.com\"
+            
+#             if [ ! -d \"\$DEPLOY_DIR\" ]; then
+#               echo '📁 Creating deployment directory...'
+#               sudo mkdir -p \"\$DEPLOY_DIR\"
+#               sudo chown -R $USER:$USER \"\$DEPLOY_DIR\"
+#             fi
+            
+#             cd \"\$DEPLOY_DIR\"
+            
+#             echo '📂 Current directory:'
+#             pwd
+            
+#             # Initialize git if needed
+#             if [ ! -d .git ]; then
+#               echo '🔧 Initializing git repository...'
+#               git init
+#               git remote add origin https://github.com/${{ github.repository }}.git
+#             fi
+            
+#             # Fetch and reset to latest code
+#             echo '⬇️ Fetching latest code...'
+#             git fetch origin
+#             git reset --hard origin/${{ github.ref_name }}
+            
+#             echo '📝 Latest commit:'
+#             git log --oneline -1
+            
+#             # ===== CRITICAL FIX: INSTALL DEPENDENCIES BEFORE CHECKING FILES =====
+#             echo '📦 Installing ALL dependencies...'
+#             npm ci
+            
+#             echo '🔍 Checking TypeScript configuration...'
+#             if [ -f tsconfig.json ]; then
+#               echo '📄 tsconfig.json found:'
+#               cat tsconfig.json | grep -A 10 '"paths"'
+#             elif [ -f jsconfig.json ]; then
+#               echo '📄 jsconfig.json found:'
+#               cat jsconfig.json | grep -A 10 '"paths"'
+#             else
+#               echo '⚠️ No TypeScript/JavaScript config found!'
+#             fi
+            
+#             echo '🔍 Checking if @/lib directory exists...'
+#             find . -type d -name "lib" | head -5
+#             ls -la ./lib/ 2>/dev/null || echo 'No ./lib directory'
+#             ls -la ./src/lib/ 2>/dev/null || echo 'No ./src/lib directory'
+            
+#             echo '🏗️ Building application...'
+            
+#             if [ \"${{ github.ref_name }}\" == \"dev\" ]; then
+#               # ===== DEV BRANCH DEPLOYMENT =====
+#               echo '🎯 Deploying DEV environment...'
+              
+#               # Use .env.dev if exists
+#               if [ -f .env.dev ]; then
+#                 echo '📄 Using .env.dev file'
+#                 cp .env.dev .env.local
+#               else
+#                 echo '⚠️ Warning: .env.dev not found, checking for .env'
+#                 [ -f .env ] && cp .env .env.local || echo 'No .env file found'
+#               fi
+              
+#               # Build for dev
+#               BUILD_DIR=build-dev NODE_ENV=production npm run build:dev
+              
+#               # Restart PM2 process
+#               echo '🔄 Managing PM2 dev process...'
+#               pm2 delete jimmystickman-dev 2>/dev/null || true
+#               pm2 start npm --name \"jimmystickman-dev\" -- run start:dev
+              
+#             else
+#               # ===== MAIN BRANCH (PRODUCTION) DEPLOYMENT =====
+#               echo '🚀 Deploying PRODUCTION environment...'
+              
+#               # Use .env.prod if exists
+#               if [ -f .env.prod ]; then
+#                 echo '📄 Using .env.prod file'
+#                 cp .env.prod .env.local
+#               else
+#                 echo '⚠️ Warning: .env.prod not found, checking for .env'
+#                 [ -f .env ] && cp .env .env.local || echo 'No .env file found'
+#               fi
+              
+#               # Build for production
+#               NODE_ENV=production npm run build:prod
+              
+#               # Restart PM2 process
+#               echo '🔄 Managing PM2 production process...'
+#               pm2 delete jimmystickman-prod 2>/dev/null || true
+#               pm2 start npm --name \"jimmystickman-prod\" -- run start:prod
+#             fi
+            
+#             pm2 save
+            
+#             echo '🌐 Reloading nginx...'
+#             sudo systemctl reload nginx
+            
+#             echo '✅ ========== DEPLOYMENT COMPLETE =========='
+#           "
+
+name: 🚀 Deploy to VPS
 
 on:
   push:
-    branches:
-      - main
-      - dev
+    branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 60
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.7.0
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🚀 Deploy to Server
+        uses: appleboy/ssh-action@v0.1.5
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add VPS to known_hosts
-        run: |
-          ssh-keyscan -p 22222 ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
-
-
-      - name: Deploy to VPS
-        run: |
-          set -e
-          
-          ssh -p 22222 ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} "
-            set -e
+          host: ${{ secrets.VPS_IP }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 25m
+          script: |
+            set -e  # Exit on any error
             
-            echo '🚀 ========== STARTING DEPLOYMENT =========='
+            echo "🚀 Starting deployment..."
             
-            DEPLOY_DIR=\"/var/www/jimmystickman.com\"
+            # ================================================================
+            # 1. SETUP PATH FOR NODE.JS
+            # ================================================================
+            echo "📊 Setting up Node.js PATH..."
             
-            if [ ! -d \"\$DEPLOY_DIR\" ]; then
-              echo '📁 Creating deployment directory...'
-              sudo mkdir -p \"\$DEPLOY_DIR\"
-              sudo chown -R $USER:$USER \"\$DEPLOY_DIR\"
-            fi
+            # Primary nvm path
+            NVM_PATH="/home/admin-gsas/.nvm/versions/node/v24.13.0/bin"
             
-            cd \"\$DEPLOY_DIR\"
-            
-            echo '📂 Current directory:'
-            pwd
-            
-            # Initialize git if needed
-            if [ ! -d .git ]; then
-              echo '🔧 Initializing git repository...'
-              git init
-              git remote add origin https://github.com/${{ github.repository }}.git
-            fi
-            
-            # Fetch and reset to latest code
-            echo '⬇️ Fetching latest code...'
-            git fetch origin
-            git reset --hard origin/${{ github.ref_name }}
-            
-            echo '📝 Latest commit:'
-            git log --oneline -1
-            
-            # ===== CRITICAL FIX: INSTALL DEPENDENCIES BEFORE CHECKING FILES =====
-            echo '📦 Installing ALL dependencies...'
-            npm ci
-            
-            echo '🔍 Checking TypeScript configuration...'
-            if [ -f tsconfig.json ]; then
-              echo '📄 tsconfig.json found:'
-              cat tsconfig.json | grep -A 10 '"paths"'
-            elif [ -f jsconfig.json ]; then
-              echo '📄 jsconfig.json found:'
-              cat jsconfig.json | grep -A 10 '"paths"'
-            else
-              echo '⚠️ No TypeScript/JavaScript config found!'
-            fi
-            
-            echo '🔍 Checking if @/lib directory exists...'
-            find . -type d -name "lib" | head -5
-            ls -la ./lib/ 2>/dev/null || echo 'No ./lib directory'
-            ls -la ./src/lib/ 2>/dev/null || echo 'No ./src/lib directory'
-            
-            echo '🏗️ Building application...'
-            
-            if [ \"${{ github.ref_name }}\" == \"dev\" ]; then
-              # ===== DEV BRANCH DEPLOYMENT =====
-              echo '🎯 Deploying DEV environment...'
+            if [ -d "$NVM_PATH" ]; then
+              echo "✅ Found Node.js at: $NVM_PATH"
+              export PATH="$NVM_PATH:$PATH"
               
-              # Use .env.dev if exists
-              if [ -f .env.dev ]; then
-                echo '📄 Using .env.dev file'
-                cp .env.dev .env.local
-              else
-                echo '⚠️ Warning: .env.dev not found, checking for .env'
-                [ -f .env ] && cp .env .env.local || echo 'No .env file found'
+              # Create symlinks
+              sudo ln -sf "$NVM_PATH/node" /usr/local/bin/node 2>/dev/null || true
+              sudo ln -sf "$NVM_PATH/npm" /usr/local/bin/npm 2>/dev/null || true
+              sudo ln -sf "$NVM_PATH/npx" /usr/local/bin/npx 2>/dev/null || true
+            else
+              echo "🔍 Searching for Node.js..."
+              # Try common locations
+              for path in "/usr/local/bin" "/usr/bin" "/opt/node/bin" "/home/admin-gsas/.nvm/versions/node/*/bin"; do
+                if [ -f "$path/npm" ]; then
+                  echo "✅ Found npm at: $path"
+                  export PATH="$path:$PATH"
+                  break
+                fi
+              done
+            fi
+            
+            # Verify
+            echo "📊 Node.js: $(node --version 2>/dev/null || echo 'Not found')"
+            echo "📊 npm: $(npm --version 2>/dev/null || echo 'Not found')"
+            
+            if ! command -v npm &> /dev/null; then
+              echo "❌ npm not found! Installing..."
+              curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+              sudo apt install -y nodejs
+            fi
+            
+            # ================================================================
+            # 2. CONFIGURATION
+            # ================================================================
+            APP_NAME="jimmystickman-app"
+            APP_DIR="/var/www/jimmystickman-app"
+            BACKUP_DIR="/home/admin-gsas/backups"
+            
+            echo "📱 Application: $APP_NAME"
+            echo "📁 Directory: $APP_DIR"
+            
+            # Create backup directory
+            mkdir -p "$BACKUP_DIR"
+            
+            # ================================================================
+            # 3. GO TO APP DIRECTORY
+            # ================================================================
+            echo "📁 Changing to app directory..."
+            if [ ! -d "$APP_DIR" ]; then
+              echo "📦 Creating app directory..."
+              sudo mkdir -p "$APP_DIR"
+              sudo chown -R admin-gsas:admin-gsas "$APP_DIR"
+            fi
+            
+            cd "$APP_DIR" || {
+              echo "❌ Failed to access $APP_DIR"
+              exit 1
+            }
+            
+            echo "✅ Current directory: $(pwd)"
+            
+            # ================================================================
+            # 4. CREATE BACKUP
+            # ================================================================
+            echo "📦 Creating backup..."
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            BACKUP_FILE="$BACKUP_DIR/${APP_NAME}_backup_$TIMESTAMP.tar.gz"
+            
+            if [ -d ".git" ] || [ -f "package.json" ]; then
+              tar --exclude='node_modules' --exclude='.next' -czf "$BACKUP_FILE" . 2>/dev/null && \
+                echo "✅ Backup created: $BACKUP_FILE" || \
+                echo "⚠️ Backup creation had issues"
+            else
+              echo "ℹ️ First deployment - no backup needed"
+            fi
+            
+            # ================================================================
+            # 5. UPDATE CODE
+            # ================================================================
+            echo "⬇️ Updating code..."
+            
+            if [ -d ".git" ]; then
+              git fetch origin
+              git reset --hard origin/main
+              # git clean -fd
+              git clean -fd -e .lockfile.hash
+              echo "✅ Code updated"
+            else
+              echo "📦 Cloning repository..."
+              git clone https://github.com/GSASConnect-Global-Ltd/jimmyStickman-new.git .
+            fi
+            
+            # ================================================================
+            # 6. DEPENDENCY INSTALLATION (SIMPLIFIED)
+            # ================================================================
+            echo "📦 Managing dependencies..."
+
+            # Create hash of package-lock.json if it exists
+
+            if [ -f "package-lock.json" ]; then
+                CURRENT_HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
+
+                # Check stored hash
+
+                if [ -f ".lockfile.hash" ]; then
+                  STORED_HASH=$(cat .lockfile.hash)
+                  if [ "$CURRENT_HASH" = "$STORED_HASH" ]; then
+                    echo "✅ Dependencies unchanged, skipping install"
+                    SKIP_INSTALL=true
+                  else
+                    echo "📦 package-lock.json changed, installing..."
+                    SKIP_INSTALL=false
+                  fi
+
+                else 
+                  echo "📦 First install or no hash file"
+                  SKIP_INSTALL=false
+                fi
+            else
+                echo "📦 No package-lock.json, installing..."
+                SKIP_INSTALL=false
+            fi
+
+            if [ "$SKIP_INSTALL" = false ]; then
+                # Clean old installation
+                [ -d "node_modules" ] && echo "🧹 Removing old node_modules..." && rm -rf node_modules
+                
+                # Install
+                echo "📥 Installing dependencies..."
+                if [ -f "package-lock.json" ]; then
+                  npm ci --include=dev --no-audit --no-fund
+                else
+                  npm install --include=dev --no-audit --no-fund
+                fi
+
+                # Save hash for next time
+
+                if [ -f "package-lock.json" ]; then
+                  sha256sum package-lock.json | cut -d' ' -f1 > .lockfile.hash
+                fi
+                echo "✅ Dependencies installed"
+            fi
+
+            # Ensure TypeScript is available
+
+            echo "📦 Ensuring TypeScript for build..."
+
+            npm list typescript 2>/dev/null | grep -q typescript || npm install typescript @types/node --no-audit --no-fund
+
+            # Always remove .next for fresh build
+            echo "🧹 Cleaning previous build..."
+            rm -rf .next
+
+
+
+
+            # ================================================================
+            # 7. SET ENVIRONMENT VARIABLES
+            # ================================================================
+            echo "🔐 Setting up environment variables..."
+            
+            # Create .env.production file with GitHub Secrets
+            cat > "$APP_DIR/.env.production" << EOF
+            # Generated by GitHub Actions - DO NOT EDIT MANUALLY
+            NODE_ENV=production
+            PORT=5000
+            NEXT_PUBLIC_API_BASE_URL=https://jimmystickman.com
+            NEXT_TELEMETRY_DISABLED=1
+            # Add other secrets as needed
+            EOF
+            
+            # Set correct permissions
+            chmod 600 "$APP_DIR/.env.production"
+            
+            echo "✅ Environment variables set"
+            
+            # ================================================================
+            # 7. BUILD APPLICATION
+            # ================================================================
+            echo "🏗️ Building application..."
+            
+            export NODE_ENV=production
+            export NEXT_TELEMETRY_DISABLED=1
+            
+            if npm run build; then
+              echo "✅ Build successful"
+              
+              # Check build output
+              if [ -d ".next" ]; then
+                BUILD_SIZE=$(du -sh .next | cut -f1)
+                echo "📦 Build size: $BUILD_SIZE"
+              fi
+            else
+              echo "❌ Build failed!"
+              
+              # Rollback
+              if [ -f "$BACKUP_FILE" ]; then
+                echo "🔄 Rolling back from backup..."
+                rm -rf .next node_modules
+                tar -xzf "$BACKUP_FILE" 2>/dev/null || echo "Rollback failed"
               fi
               
-              # Build for dev
-              BUILD_DIR=build-dev NODE_ENV=production npm run build:dev
-              
-              # Restart PM2 process
-              echo '🔄 Managing PM2 dev process...'
-              pm2 delete jimmystickman-dev 2>/dev/null || true
-              pm2 start npm --name \"jimmystickman-dev\" -- run start:dev
-              
-            else
-              # ===== MAIN BRANCH (PRODUCTION) DEPLOYMENT =====
-              echo '🚀 Deploying PRODUCTION environment...'
-              
-              # Use .env.prod if exists
-              if [ -f .env.prod ]; then
-                echo '📄 Using .env.prod file'
-                cp .env.prod .env.local
-              else
-                echo '⚠️ Warning: .env.prod not found, checking for .env'
-                [ -f .env ] && cp .env .env.local || echo 'No .env file found'
-              fi
-              
-              # Build for production
-              NODE_ENV=production npm run build:prod
-              
-              # Restart PM2 process
-              echo '🔄 Managing PM2 production process...'
-              pm2 delete jimmystickman-prod 2>/dev/null || true
-              pm2 start npm --name \"jimmystickman-prod\" -- run start:prod
+              exit 1
             fi
             
-            pm2 save
-            
-            echo '🌐 Reloading nginx...'
-            sudo systemctl reload nginx
-            
-            echo '✅ ========== DEPLOYMENT COMPLETE =========='
-          "
+            # Install production-only dependencies
+            # echo "⚡ Installing production dependencies..."
+            # npm ci --omit=dev --no-audit --no-fund || {
+            #   echo "⚠️ Production install failed, continuing..."
+            # }
 
+
+            
+            # ================================================================
+            # 8. PM2 SETUP
+            # ================================================================
+            echo "⚙️ Setting up PM2..."
+            
+            pm2 delete "$APP_NAME" 2>/dev/null || true
+
+            # Determine how to start
+
+            if [ -f ".next/standalone/server.js" ]; then
+                echo "🔐 Starting standalone build..."
+                cd .next/standalone
+                PORT=5000 pm2 start "npx next start --port 5000" --name "$APP_NAME"
+                # pm2 start server.js --name "$APP_NAME" -- --port 5000 --hostname 0.0.0.0
+                cd "$APP_DIR"
+            else
+                echo "⚡ Starting Next.js production server..."
+                # CRITICAL: Use npx next start, not npm start
+                PORT=5000 pm2 start "npx next start --port 5000" --name "$APP_NAME"
+                # pm2 start "npx next start" --name "$APP_NAME" -- --port 5000 --hostname 0.0.0.0
+            fi
+
+            pm2 save 2>/dev/null || true
+
+            # ================================================================
+            # 9. VERIFICATION
+            # ================================================================
+
+            echo "🔍 Verifying startup..."
+            sleep 10
+
+            # Check if running
+            if pm2 status "$APP_NAME" | grep -q "online"; then
+                echo "✅ PM2 process is online"
+            else
+                echo "❌ PM2 process not started"
+                pm2 logs "$APP_NAME" --lines 20
+                exit 1
+            fi
+
+            # Check if listening
+            if timeout 3 bash -c "echo >/dev/tcp/127.0.0.1/5000"; then
+                echo "✅ Port 5000 is listening"
+            else
+                echo "❌ Port 5000 not listening"
+                exit 1
+
+            fi
+
+            # Health check
+            echo "🏥 Final health check..."
+            if curl -s -f -m 10 http://127.0.0.1:5000 > /dev/null; then
+                echo "🎉 Application is fully operational!"
+            else
+                echo "⚠️ Application started but not responding to HTTP"
+                echo "   Testing alternative paths..."
+                curl -I http://127.0.0.1:5000 2>/dev/null | head -1
+                echo "   Check: curl http://127.0.0.1:5000"
+            fi
+            
+            # # ================================================================
+            # # 9. HEALTH CHECK
+            # # ================================================================
+            # echo "🏥 Running health check..."
+            # sleep 5  # Give app time to start
+            
+            # MAX_RETRIES=3
+            # HEALTHY=false
+            
+            # for i in $(seq 1 $MAX_RETRIES); do
+            #   if curl -s -f -m 5 http://127.0.0.1:3000 > /dev/null; then
+            #     echo "✅ Application is healthy (attempt $i/$MAX_RETRIES)"
+            #     HEALTHY=true
+            #     break
+            #   else
+            #     echo "  Waiting... (attempt $i/$MAX_RETRIES)"
+            #     sleep 3
+            #   fi
+            # done
+            
+            # if [ "$HEALTHY" = false ]; then
+            #   echo "⚠️ Health check failed after $MAX_RETRIES attempts"
+            #   echo "📋 Checking PM2 logs..."
+            #   pm2 logs "$APP_NAME" --lines 10 2>/dev/null || echo "No logs available"
+            # fi
+            
+            # # ================================================================
+            # # 10. CLEANUP
+            # # ================================================================
+            # echo "🧹 Cleaning up old backups..."
+            # cd "$BACKUP_DIR"
+            
+            # # Keep last 5 backups
+            # ls -t ${APP_NAME}_backup_*.tar.gz 2>/dev/null | tail -n +6 | while read -r file; do
+            #   echo "  Removing: $file"
+            #   rm -f "$file" 2>/dev/null || true
+            # done
+            
+            # BACKUP_COUNT=$(ls -1 ${APP_NAME}_backup_*.tar.gz 2>/dev/null | wc -l)
+            # echo "📦 Backups retained: $BACKUP_COUNT"
+            
+            # # ================================================================
+            # # 11. FINAL STATUS
+            # # ================================================================
+            # echo ""
+            # echo "🎉 DEPLOYMENT COMPLETED SUCCESSFULLY!"
+            # echo "========================================"
+            # echo "📱 Application: $APP_NAME"
+            # echo "📁 Directory: $APP_DIR"
+            # echo "🌐 URL: https://orrelng.com"
+            # echo "🕒 Time: $(date)"
+            # echo "📊 Node.js: $(node --version)"
+            # echo "📊 npm: $(npm --version)"
+            # echo ""
+            # echo "📋 PM2 Status:"
+            # pm2 status "$APP_NAME" --silent 2>/dev/null || {
+            #   echo "  Could not get PM2 status"
+            #   echo "  Checking process directly..."
+            #   ps aux | grep -v grep | grep "$APP_NAME" || echo "  No process found"
+            # }
+            
+            # echo ""
+            # echo "✅ Deployment complete! The application should now be live."
